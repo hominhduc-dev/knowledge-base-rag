@@ -1,0 +1,11 @@
+{
+  "name": "knowledge-base-rag",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "dev": "pnpm --filter @tang-thu/frontend dev",
+    "build": "pnpm --filter @tang-thu/frontend build",
+    "lint": "pnpm --filter @tang-thu/frontend lint",
+    "typecheck": "pnpm --filter @tang-thu/frontend typecheck"
+  }
+}
