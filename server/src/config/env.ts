@@ -31,6 +31,13 @@ const schema = z.object({
   // Model trả 3072 chiều đã chuẩn hóa sẵn; bản cắt ngắn thì KHÔNG, nên
   // rag/embed.ts phải tự chuẩn hóa L2.
   EMBEDDING_DIM: numeric(1536),
+  // Mã hóa bất đối xứng câu hỏi/tài liệu. Về lý thuyết đúng hơn, nhưng phép thử
+  // một mẫu cho thấy nó làm độ phân biệt hơi kém đi — để bật/tắt được và đưa vào
+  // làm biến của bộ đánh giá. Xem ghi chú trong rag/embed.ts.
+  GEMINI_USE_TASK_TYPE: z
+    .string()
+    .default("true")
+    .transform((v) => v.toLowerCase() !== "false" && v !== "0"),
 
   // --- Xác thực ------------------------------------------------------------
   // 32 ký tự là sàn thực dụng cho HS256: khóa ngắn hơn đầu ra của hàm băm thì

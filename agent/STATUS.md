@@ -22,7 +22,7 @@
 | Cách ly phạm vi | **6/6 test đạt trên dữ liệu thật** | `lib/scope.ts` là nơi duy nhất giữ quy tắc |
 | Module `netlab` | **Xong, 16/16 test đạt** | TCP 9999 · HTTP tự viết 8080 |
 | Docker | `db` chạy được; `api`/`web` **chưa build thử** | 4 dịch vụ + Caddy đã viết |
-| Truy hồi | Bản tạm — 3 kết quả cứng | Chờ khóa Gemini để sinh vector |
+| Truy hồi | **Vector đã chạy**; `/search` vẫn là bản tạm | Còn thiếu `retrieval.sql.ts` truy vấn lai |
 | Frontend | **Đăng nhập đã nối API thật** | `demoUsers` đã xóa; các màn khác vẫn mock |
 | Tài liệu | **Gần khớp** | Chỉ còn `cau-truc-thu-muc.md` chưa cập nhật |
 | CI/CD | Chưa có `.github/` | Test rò rỉ phạm vi phải là điều kiện chặn merge |
@@ -46,7 +46,8 @@
 - [x] `db:check` — **25/25 đạt**.
 - [x] `db:seed` — 5 đơn vị · 6 cán bộ · 57 sinh viên · 7 tài liệu · 13 đoạn văn.
 - [x] Cặp đối chứng đổi sang CNTT (105 tín chỉ) ↔ Kiến trúc (90 tín chỉ).
-- [ ] Sinh vector nhúng cho 13 đoạn văn — **cần `GEMINI_API_KEY`**.
+- [x] **Sinh vector nhúng cho 13 đoạn mồi** — khóa Gemini đã có, `db:embed` chạy đạt.
+      Chuẩn L2 của cả 13 vector đúng bằng 1.000000.
 - [!] **Trước Sprint 4:** `seed.ts` xóa-rồi-tạo lại `chunks`, mà `eval_gold_chunks.chunk_id`
       có `ON DELETE CASCADE` — chạy lại seed sẽ xóa sạch liên kết câu hỏi vàng, không báo
       gì. Chưa hại vì bộ `golden-30` còn rỗng. Xem `docs/erd.md` mục 5.1.
@@ -71,7 +72,8 @@
 - [ ] `modules/chat/` — `POST /chat` SSE và `/conversations/*` (TV3).
 - [ ] `/departments/*` và `/departments/:id/members` (TV4).
 - [ ] `retrieval.sql.ts` — truy vấn lai thật.
-- [ ] `rag/` — còn `embed.ts` · `retrieve.ts` · `generate.ts` · `prompt.ts`.
+- [x] `rag/embed.ts` — chuẩn hóa L2, cache theo `content_hash`, lô 64, lùi có nhiễu.
+- [ ] `rag/` — còn `retrieve.ts` · `generate.ts` · `prompt.ts`.
 - [ ] `eval/` — bộ 30 câu hỏi vàng, 9 thí nghiệm.
 
 ## Module netlab — môn Lập trình mạng
@@ -139,8 +141,6 @@ POST /api/search              bản tạm: 3 kết quả cứng
 
 ## Blocker hiện tại
 
-- **Chưa có `GEMINI_API_KEY`** — chặn `rag/embed.ts`, do đó chặn nhánh vector của truy
-  hồi. Nhánh từ khóa đã chạy (cột `content_tsv` tự sinh) và đủ để kiểm chứng cách ly.
 - **[!] Tài liệu scan không nạp được.** Đã thử một thông báo thật của trường
   (`thong-bao-xet-quy-doi-tuong-duong-chung-chi-ngoai-ngu...pdf`): 3 trang, 3 đối tượng
   ảnh, **0 ký tự văn bản**. Hệ thống từ chối đúng cách kèm thông báo rõ ràng, nhưng OCR
@@ -150,10 +150,11 @@ Supabase đã bị loại khỏi thiết kế nên blocker cũ không còn.
 
 ## Thứ tự công việc tiếp theo
 
-1. **Khảo sát tập tài liệu thật** — kiểm từng tệp có lớp văn bản không. Đã gặp một
-   thông báo của trường là bản scan thuần, không nạp được. Nếu phần lớn tài liệu
-   cũng vậy thì phải đổi nguồn dữ liệu, và biết sớm là biết ở tuần 1.
-2. Nối màn tài liệu của giao diện vào `/documents` thật.
+1. **Viết `retrieval.sql.ts`** — truy vấn lai ở mục 4.1: vector + toàn văn, bộ lọc
+   phạm vi trong `WHERE`. Mọi mảnh ghép đã sẵn sàng: vector đã có, `content_tsv` đã
+   có, `lib/scope.ts` đã có. Thay bản tạm 3 kết quả cứng của `/search`.
+2. **Khảo sát tập tài liệu thật** — kiểm từng tệp có lớp văn bản không. Đã gặp một
+   thông báo của trường là bản scan thuần, không nạp được.
 3. Dựng `modules/chat/` — SSE `sources → token* → done`.
 4. `docker compose build` để kiểm hai Dockerfile chưa từng chạy.
 5. Dựng `modules/documents/` — upload → parse → chunk → lưu CSDL.

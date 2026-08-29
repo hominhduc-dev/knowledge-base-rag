@@ -18,7 +18,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:check": "tsx --env-file=.env prisma/check.ts",
-    "db:seed": "tsx --env-file=.env prisma/seed.ts"
+    "db:seed": "tsx --env-file=.env prisma/seed.ts",
+    "db:embed": "tsx --env-file=.env prisma/embed.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

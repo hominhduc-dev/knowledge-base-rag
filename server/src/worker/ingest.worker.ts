@@ -19,7 +19,8 @@
 import { prisma } from "../config/prisma.js";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
-import { catDoan, MAC_DINH } from "../rag/chunk.js";
+import { catDoan } from "../rag/chunk.js";
+import { nhungTaiLieu } from "../rag/embed.js";
 import { docTaiLieu, ParseError } from "../modules/documents/documents.parser.js";
 import { docTep } from "../modules/documents/documents.storage.js";
 import { createHash } from "node:crypto";
@@ -132,11 +133,29 @@ async function xuLy(job: JobRow): Promise<void> {
     });
   });
 
-  logger.info(`Đã xử lý "${doc.title}" — ${doan.length} đoạn, ${pageCount} trang`);
+  logger.info(`Đã cắt "${doc.title}" — ${doan.length} đoạn, ${pageCount} trang`);
 
-  // TODO Sprint 2: sinh vector nhúng cho các đoạn vừa tạo (cần GEMINI_API_KEY).
-  // Tới lúc đó, tài liệu chỉ tìm được bằng nhánh TỪ KHÓA của truy vấn lai —
-  // cột `content_tsv` đã tự sinh nên nhánh đó chạy được ngay từ bây giờ.
+  // --- Sinh vector nhúng ---------------------------------------------------
+  // Tài liệu đã ở trạng thái READY TRƯỚC bước này, có chủ đích: cắt đoạn xong là
+  // đã tra cứu được bằng nhánh TỪ KHÓA (cột `content_tsv` tự sinh). Nếu API nhúng
+  // hỏng hoặc hết hạn mức, tài liệu vẫn dùng được một nửa thay vì thành FAILED và
+  // biến mất khỏi mọi kết quả.
+  //
+  // Đây là lý do bước này nằm NGOÀI transaction ở trên.
+  try {
+    const so = await nhungTaiLieu(doc.id);
+    logger.info(
+      `Đã nhúng "${doc.title}" — ${so.tong} đoạn ` +
+        `(${so.goiApi} gọi API, ${so.tuCache} lấy từ vector đã có)`,
+    );
+  } catch (error) {
+    // KHÔNG ném tiếp: job coi như xong. Thiếu vector là suy giảm chất lượng, không
+    // phải hỏng. Chạy `pnpm db:embed` để bù sau.
+    logger.error(
+      `Nhúng thất bại cho "${doc.title}" — tài liệu vẫn tra cứu được bằng từ khóa. ` +
+        `Chạy \`pnpm db:embed\` để bù. Lỗi: ${(error as Error).message}`,
+    );
+  }
 }
 
 async function ghiNhanThatBai(job: JobRow, error: unknown): Promise<void> {
