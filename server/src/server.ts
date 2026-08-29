@@ -5,6 +5,7 @@ import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { prisma } from "./config/prisma.js";
 import { logger } from "./lib/logger.js";
+import { startWorker } from "./worker/ingest.worker.js";
 
 const app = createApp();
 
@@ -20,6 +21,10 @@ const server = app.listen(env.PORT, HOST, () => {
   logger.info(`Tàng Thư API đang nghe tại http://${HOST}:${env.PORT}/api`);
 });
 
+// Worker nạp tài liệu chạy trong CÙNG tiến trình — xem ghi chú đầu
+// `worker/ingest.worker.ts` về việc khi nào phải tách ra.
+const worker = startWorker();
+
 /**
  * Tắt có trật tự: ngừng nhận kết nối mới, chờ request đang chạy xong, rồi mới
  * đóng pool. Đóng Prisma trước là cắt ngang chính những request đang dở.
@@ -34,6 +39,10 @@ async function shutdown(signal: string): Promise<void> {
     process.exit(1);
   }, 10_000);
   hetGio.unref();
+
+  // Dừng worker TRƯỚC khi đóng pool: nó đang giữ transaction, đóng pool giữa
+  // chừng sẽ để lại job ở PROCESSING và phải chờ cơ chế thu hồi job treo.
+  worker.stop();
 
   server.close(async (error) => {
     if (error) logger.error("Lỗi khi đóng máy chủ HTTP", error);

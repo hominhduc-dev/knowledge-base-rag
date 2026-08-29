@@ -110,10 +110,11 @@ agent/            trạng thái dự án và handoff giữa các phiên làm vi�
 
 | Tài liệu | Nội dung |
 |---|---|
-| [`docs/cau-truc-thu-muc.md`](docs/cau-truc-thu-muc.md) | Cấu trúc thư mục và phân chia quyền sở hữu |
-| [`docs/phan-tich-thiet-ke-he-thong.md`](docs/phan-tich-thiet-ke-he-thong.md) | Phân tích yêu cầu, use-case, kiến trúc, sequence |
+| [`docs/TONG-QUAN-DU-AN.md`](docs/TONG-QUAN-DU-AN.md) | **Bắt đầu từ đây** — bối cảnh, phạm vi, lộ trình 8 tuần |
+| [`docs/THIET-KE-HE-THONG.md`](docs/THIET-KE-HE-THONG.md) | Phân tích và thiết kế hệ thống, ba khung nhìn kiến trúc |
 | [`docs/erd.md`](docs/erd.md) | Sơ đồ thực thể – quan hệ, chỉ mục, ràng buộc |
-| [`docs/phan-quyen.md`](docs/phan-quyen.md) | Bốn vai, ma trận quyền, kịch bản kiểm thử cách ly |
+| [`docs/phan-quyen.md`](docs/phan-quyen.md) | Hai vai, ma trận quyền, kịch bản kiểm thử cách ly |
+| [`docs/cau-truc-thu-muc.md`](docs/cau-truc-thu-muc.md) | Cấu trúc thư mục và phân chia quyền sở hữu ⚠ còn mô tả bản cũ |
 | [`docs/api-contract.md`](docs/api-contract.md) | Hợp đồng giữa giao diện và máy chủ |
 | [`docs/thuat-ngu.md`](docs/thuat-ngu.md) | Bảng thuật ngữ Anh–Việt cho báo cáo |
 | [`agent/STATUS.md`](agent/STATUS.md) | Trạng thái hiện tại của từng phần |

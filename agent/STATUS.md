@@ -8,10 +8,9 @@
 > một ứng dụng web thuần. Nguồn sự thật là `docs/THIET-KE-HE-THONG.md` v2.0 và
 > `docs/TONG-QUAN-DU-AN.md`.
 >
-> **Cảnh báo:** hai tài liệu còn lại trong `docs/` vẫn mô tả thiết kế v1 **đã bị thay
-> thế** — `cau-truc-thu-muc.md` (còn `apps/backend`, chưa có `netlab`) và
-> `phan-tich-thiet-ke-he-thong.md` (đã bị `THIET-KE-HE-THONG.md` thay thế hẳn, nên xóa
-> hơn là viết lại). `phan-quyen.md`, `erd.md` và `api-contract.md` đã khớp v2.
+> **Cảnh báo:** còn `cau-truc-thu-muc.md` mô tả bản cũ (`apps/backend`, chưa có `netlab`).
+> `phan-quyen.md`, `erd.md` và `api-contract.md` đã khớp v2.
+> `phan-tich-thiet-ke-he-thong.md` đã xóa — bị `THIET-KE-HE-THONG.md` thay thế hẳn.
 
 ## Tổng quan
 
@@ -25,7 +24,7 @@
 | Docker | `db` chạy được; `api`/`web` **chưa build thử** | 4 dịch vụ + Caddy đã viết |
 | Truy hồi | Bản tạm — 3 kết quả cứng | Chờ khóa Gemini để sinh vector |
 | Frontend | **Đăng nhập đã nối API thật** | `demoUsers` đã xóa; các màn khác vẫn mock |
-| Tài liệu | **Gần khớp** | Còn `cau-truc-thu-muc.md` và `phan-tich-thiet-ke-he-thong.md` |
+| Tài liệu | **Gần khớp** | Chỉ còn `cau-truc-thu-muc.md` chưa cập nhật |
 | CI/CD | Chưa có `.github/` | Test rò rỉ phạm vi phải là điều kiện chặn merge |
 
 ## Hạ tầng
@@ -63,12 +62,16 @@
       trả kèm `memberships[]`.
 - [x] `GET /health` — `{status, uptime, pendingJobs}`.
 - [x] `modules/retrieval/` — `POST /search`, bản tạm 3 kết quả cứng.
-- [ ] `modules/documents/` — `/documents/*` (TV2).
+- [x] `modules/documents/` — 9 endpoint: liệt kê · chi tiết · chunks · trạng thái ·
+      tệp gốc · tải lên · sửa · xóa · chạy lại.
+- [x] `rag/chunk.ts` — cắt theo Điều/Khoản, 40 test đạt.
+- [x] `worker/ingest.worker.ts` — `FOR UPDATE SKIP LOCKED`, thu hồi job treo, dừng
+      sau 3 lần thử; lỗi định dạng thì không thử lại.
+- [x] `middleware/upload.middleware.ts` — multer, trần 20 MB, chỉ PDF/DOCX.
 - [ ] `modules/chat/` — `POST /chat` SSE và `/conversations/*` (TV3).
 - [ ] `/departments/*` và `/departments/:id/members` (TV4).
 - [ ] `retrieval.sql.ts` — truy vấn lai thật.
-- [ ] `rag/` — `chunk.ts` · `embed.ts` · `retrieve.ts` · `generate.ts` · `prompt.ts`.
-- [ ] `worker/` — vòng lặp đọc `ingest_jobs`.
+- [ ] `rag/` — còn `embed.ts` · `retrieve.ts` · `generate.ts` · `prompt.ts`.
 - [ ] `eval/` — bộ 30 câu hỏi vàng, 9 thí nghiệm.
 
 ## Module netlab — môn Lập trình mạng
@@ -109,7 +112,7 @@
 - [x] Viết lại `docs/api-contract.md` — 12 mục, đã đối chiếu từng khẳng định với API
       đang chạy. Chốt camelCase, đổi `articleRef` → `headingPath`, SSE còn 4 sự kiện.
 - [ ] Viết lại `docs/cau-truc-thu-muc.md` cho `server/` + `web/` + `netlab/`.
-- [ ] Xóa hoặc gộp `docs/phan-tich-thiet-ke-he-thong.md` — đã bị v2.0 thay thế.
+- [x] Xóa `docs/phan-tich-thiet-ke-he-thong.md` — đã bị `THIET-KE-HE-THONG.md` thay thế.
 - [ ] `README.md` — bỏ Supabase/Vercel/Hostinger, thay bằng `docker compose up`.
 - [ ] Sửa mục 3.2 và 9.1 tài liệu thiết kế: vector **1536** chiều, không phải 768.
 - [ ] Sửa mục 11: "chuyển model không downtime" chỉ đúng với model cùng số chiều.
@@ -136,16 +139,22 @@ POST /api/search              bản tạm: 3 kết quả cứng
 
 ## Blocker hiện tại
 
-- **Chưa có `GEMINI_API_KEY`** — chặn sinh vector, do đó chặn nhánh vector của truy hồi.
-  Nhánh từ khóa đã chạy và đủ để kiểm chứng cách ly phạm vi.
+- **Chưa có `GEMINI_API_KEY`** — chặn `rag/embed.ts`, do đó chặn nhánh vector của truy
+  hồi. Nhánh từ khóa đã chạy (cột `content_tsv` tự sinh) và đủ để kiểm chứng cách ly.
+- **[!] Tài liệu scan không nạp được.** Đã thử một thông báo thật của trường
+  (`thong-bao-xet-quy-doi-tuong-duong-chung-chi-ngoai-ngu...pdf`): 3 trang, 3 đối tượng
+  ảnh, **0 ký tự văn bản**. Hệ thống từ chối đúng cách kèm thông báo rõ ràng, nhưng OCR
+  nằm ngoài phạm vi đề tài (mục 3 tổng quan). Cần khảo sát cả tập tài liệu ngay.
 
 Supabase đã bị loại khỏi thiết kế nên blocker cũ không còn.
 
 ## Thứ tự công việc tiếp theo
 
-1. Dựng `modules/documents/` để màn tài liệu bỏ được mock.
-2. Dựng `modules/chat/` — SSE `sources → token* → done`.
-3. Dựng `/users` và `/departments` để màn quản trị bỏ được mock.
+1. **Khảo sát tập tài liệu thật** — kiểm từng tệp có lớp văn bản không. Đã gặp một
+   thông báo của trường là bản scan thuần, không nạp được. Nếu phần lớn tài liệu
+   cũng vậy thì phải đổi nguồn dữ liệu, và biết sớm là biết ở tuần 1.
+2. Nối màn tài liệu của giao diện vào `/documents` thật.
+3. Dựng `modules/chat/` — SSE `sources → token* → done`.
 4. `docker compose build` để kiểm hai Dockerfile chưa từng chạy.
 5. Dựng `modules/documents/` — upload → parse → chunk → lưu CSDL.
 6. Viết `retrieval.sql.ts` thật, thay bản tạm.

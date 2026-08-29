@@ -9,6 +9,7 @@ import { Router } from "express";
 import { prisma } from "./config/prisma.js";
 import { ok } from "./lib/http.js";
 import { authRouter } from "./modules/auth/index.js";
+import { documentsRouter } from "./modules/documents/index.js";
 import { retrievalRouter } from "./modules/retrieval/index.js";
 
 export const routes: Router = Router();
@@ -30,15 +31,15 @@ routes.get("/health", async (_req, res) => {
 
 // --- Đã hiện thực -----------------------------------------------------------
 routes.use(authRouter); //      POST /auth/login · GET /auth/me · PUT /auth/password
+routes.use(documentsRouter); // /documents/* — liệt kê · chi tiết · chunks · tệp · tải lên
 routes.use(retrievalRouter); // POST /search   (bản tạm: 3 kết quả cứng)
 
 // --- Chưa hiện thực ---------------------------------------------------------
 // Gắn thêm vào đây khi xong, mỗi module một dòng:
 //
-//   routes.use(documentsRouter);  /documents/*                          [TV2]
 //   routes.use(chatRouter);       /chat (SSE) · /conversations/*        [TV3]
 //   routes.use(adminRouter);      /departments/* · /departments/:id/members [TV4]
 //   routes.use(evalRouter);       /eval/runs                            [Đức]
 //
-// Đường dẫn và khuôn dữ liệu của cả bốn đã chốt ở phụ lục A. Sửa tài liệu
+// Đường dẫn và khuôn dữ liệu của cả ba đã chốt ở phụ lục A. Sửa tài liệu
 // trước, sửa code sau.
