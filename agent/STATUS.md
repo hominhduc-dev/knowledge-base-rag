@@ -23,7 +23,7 @@
 | Module `netlab` | **Xong, 16/16 test đạt** | TCP 9999 · HTTP tự viết 8080 |
 | Docker | `db` chạy được; `api`/`web` **chưa build thử** | 4 dịch vụ + Caddy đã viết |
 | Truy hồi | Bản tạm — 3 kết quả cứng | Chờ khóa Gemini để sinh vector |
-| Frontend | **Chưa đụng tới** | Vẫn mock, vẫn 4 vai |
+| Frontend | **Đăng nhập đã nối API thật** | `demoUsers` đã xóa; các màn khác vẫn mock |
 | Tài liệu | **Lệch một phần** | v2.0 + `phan-quyen` + `erd` đã khớp; 3 file cũ chưa |
 | CI/CD | Chưa có `.github/` | Test rò rỉ phạm vi phải là điều kiện chặn merge |
 
@@ -84,11 +84,16 @@
 
 ## Frontend
 
-Giao diện đã hoàn thiện từ trước và **chưa được đụng tới trong bản chuyển đổi này**.
-
-- [ ] `api-client.ts` — thêm `ApiError`, bóc lớp vỏ `data`.
-- [ ] `LoginForm.tsx` nối vào API thật, đổi state `email` → `account`.
-- [ ] **Xóa khối `demoUsers`** trong `features/auth/useAuth.ts`.
+- [x] `api-client.ts` viết lại — `ApiError` giữ mã lỗi, bóc lớp vỏ `data`, xử lý
+      lỗi mạng và phản hồi không phải JSON.
+- [x] **Đã xóa hẳn khối `demoUsers`** — không còn đường đăng nhập nào không qua máy chủ.
+- [x] `useAuth.ts` viết lại — phiên thật, token trong localStorage, khôi phục bằng
+      `GET /auth/me`.
+- [x] `AuthGuard` mới, gắn vào `(app)/layout.tsx`.
+- [x] `LoginForm` gọi `POST /auth/login` thật, có trạng thái đang gửi.
+- [x] `UserMenu` — nút Đăng xuất giờ **thật sự** xóa phiên (trước là `<Link>` chỉ
+      điều hướng, token vẫn nằm nguyên).
+- [x] `ChatBox` — khóa phạm vi theo `roleCode`, chỉ ADMIN đổi được.
 - [ ] `PermissionMatrix.tsx` xuống 2 cột; bỏ `RoleSelect.tsx`.
 - [ ] Bỏ mock cho tài liệu, hội thoại, quản trị.
 
@@ -134,9 +139,9 @@ Supabase đã bị loại khỏi thiết kế nên blocker cũ không còn.
 
 ## Thứ tự công việc tiếp theo
 
-1. Sửa `api-client.ts`, nối `LoginForm` vào API thật, xóa `demoUsers`.
-2. Sửa giao diện xuống 2 vai.
-3. Sửa `docs/api-contract.md` cho khớp v2.
+1. Sửa giao diện xuống 2 vai — `PermissionMatrix.tsx`, bỏ `RoleSelect.tsx`.
+2. Sửa `docs/api-contract.md` cho khớp v2.
+3. Dựng `modules/documents/` để màn tài liệu bỏ được mock.
 4. `docker compose build` để kiểm hai Dockerfile chưa từng chạy.
 5. Dựng `modules/documents/` — upload → parse → chunk → lưu CSDL.
 6. Viết `retrieval.sql.ts` thật, thay bản tạm.

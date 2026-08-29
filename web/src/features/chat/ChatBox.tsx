@@ -13,7 +13,8 @@ import type { ChatMessage } from "./MessageBubble";
 export function ChatBox() {
   const currentUser = useCurrentUser();
   // Mặc định theo đơn vị của người đăng nhập, không cứng hóa một khoa.
-  const [scope, setScope] = useState(currentUser.scope);
+  // `AuthGuard` bảo đảm đã có người dùng trước khi trang này được kết xuất.
+  const [scope, setScope] = useState(currentUser?.scope ?? "");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,8 +23,13 @@ export function ChatBox() {
   const [activeCitation, setActiveCitation] = useState<number | null>(null);
   const [lastQuestion, setLastQuestion] = useState("");
   const threadRef = useRef<HTMLDivElement>(null);
-  const scopeLocked = currentUser.role === "Giảng viên";
-  const effectiveScope = scopeLocked ? currentUser.scope : scope;
+  // Chỉ ADMIN được đổi phạm vi tra cứu; STUDENT bị khóa theo đơn vị của mình.
+  //
+  // Đây CHỈ là chuyện hiển thị. Phạm vi thật do máy chủ quyết định từ JWT và áp
+  // trong mệnh đề WHERE của truy vấn (docs/phan-quyen.md mục 4) — sửa state này
+  // trong trình duyệt không mở thêm được tài liệu nào.
+  const scopeLocked = currentUser?.roleCode !== "ADMIN";
+  const effectiveScope = (scopeLocked ? currentUser?.scope : scope) ?? "";
 
   const sources = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ApiError } from "@/lib/api-client";
 import { useAuth } from "./useAuth";
 
 export function LoginForm() {
@@ -10,17 +11,31 @@ export function LoginForm() {
   const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [dangGui, setDangGui] = useState(false);
 
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!account.trim() || !password) {
       setError("Vui lòng nhập tài khoản trường và mật khẩu.");
       return;
     }
-    // Thông báo lỗi giống hệt nhau dù sai tài khoản hay sai mật khẩu — nói rõ
-    // "không tìm thấy mã này" là để lộ mã số sinh viên nào có thật.
-    if (!login(account)) {
-      setError("Tài khoản hoặc mật khẩu không đúng.");
+
+    setDangGui(true);
+    setError(null);
+    try {
+      await login(account, password);
+      // Không tắt `dangGui` ở đây: đã điều hướng sang trang khác, đặt lại state
+      // trên một component sắp bị gỡ chỉ tạo cảnh báo trong console.
+    } catch (err) {
+      // Máy chủ CỐ TÌNH trả cùng một thông báo cho "sai tài khoản" và "sai mật
+      // khẩu". Hiển thị nguyên văn, đừng diễn giải thêm — nói rõ "không tìm
+      // thấy mã này" là để lộ mã số sinh viên nào có thật.
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Không đăng nhập được. Vui lòng thử lại.",
+      );
+      setDangGui(false);
     }
   }
 
@@ -35,6 +50,7 @@ export function LoginForm() {
             className="mt-1"
             placeholder="2351220193 hoặc duc_2351220193@dau.edu.vn"
             value={account}
+            disabled={dangGui}
             onChange={(event) => { setAccount(event.target.value); setError(null); }}
           />
           <p className="mt-1 text-[13px] leading-5 text-muted">Mã số sinh viên hoặc email trường.</p>
@@ -49,6 +65,7 @@ export function LoginForm() {
             className="mt-1"
             placeholder="••••••••"
             value={password}
+            disabled={dangGui}
             onChange={(event) => { setPassword(event.target.value); setError(null); }}
           />
         </div>
@@ -56,7 +73,9 @@ export function LoginForm() {
 
       {error && <p role="alert" className="mt-3 text-sm leading-[22px] text-danger">{error}</p>}
 
-      <Button type="submit" className="mt-4 w-full">Đăng nhập</Button>
+      <Button type="submit" className="mt-4 w-full" disabled={dangGui}>
+        {dangGui ? "Đang đăng nhập…" : "Đăng nhập"}
+      </Button>
 
       <div className="my-3 flex items-center gap-3.5 text-[13px] text-muted" aria-hidden="true">
         <span className="h-px flex-1 bg-border" />
