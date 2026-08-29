@@ -8,9 +8,10 @@
 > một ứng dụng web thuần. Nguồn sự thật là `docs/THIET-KE-HE-THONG.md` v2.0 và
 > `docs/TONG-QUAN-DU-AN.md`.
 >
-> **Cảnh báo:** ba tài liệu còn lại trong `docs/` vẫn mô tả thiết kế v1 **đã bị thay
-> thế** — `api-contract.md`, `cau-truc-thu-muc.md` và `phan-tich-thiet-ke-he-thong.md`.
-> `phan-quyen.md` và `erd.md` đã viết lại theo v2 và đã đối chiếu với CSDL đang chạy.
+> **Cảnh báo:** hai tài liệu còn lại trong `docs/` vẫn mô tả thiết kế v1 **đã bị thay
+> thế** — `cau-truc-thu-muc.md` (còn `apps/backend`, chưa có `netlab`) và
+> `phan-tich-thiet-ke-he-thong.md` (đã bị `THIET-KE-HE-THONG.md` thay thế hẳn, nên xóa
+> hơn là viết lại). `phan-quyen.md`, `erd.md` và `api-contract.md` đã khớp v2.
 
 ## Tổng quan
 
@@ -24,7 +25,7 @@
 | Docker | `db` chạy được; `api`/`web` **chưa build thử** | 4 dịch vụ + Caddy đã viết |
 | Truy hồi | Bản tạm — 3 kết quả cứng | Chờ khóa Gemini để sinh vector |
 | Frontend | **Đăng nhập đã nối API thật** | `demoUsers` đã xóa; các màn khác vẫn mock |
-| Tài liệu | **Lệch một phần** | v2.0 + `phan-quyen` + `erd` đã khớp; 3 file cũ chưa |
+| Tài liệu | **Gần khớp** | Còn `cau-truc-thu-muc.md` và `phan-tich-thiet-ke-he-thong.md` |
 | CI/CD | Chưa có `.github/` | Test rò rỉ phạm vi phải là điều kiện chặn merge |
 
 ## Hạ tầng
@@ -105,8 +106,8 @@
 - [x] Chuyển `THIET-KE-HE-THONG.md` và `TONG-QUAN-DU-AN.md` vào `docs/`.
 - [x] Viết lại `docs/phan-quyen.md` — 2 vai, `department_members`, 6 test cách ly.
 - [x] Viết lại `docs/erd.md` — 15 bảng, đã đối chiếu với CSDL đang chạy.
-- [ ] Sửa `docs/api-contract.md` — bổ sung `INTERNAL_ERROR`, ghi nhận đăng nhập bằng mã,
-      đổi shape `/health`, đổi tên sự kiện SSE thành `sources → token* → done`.
+- [x] Viết lại `docs/api-contract.md` — 12 mục, đã đối chiếu từng khẳng định với API
+      đang chạy. Chốt camelCase, đổi `articleRef` → `headingPath`, SSE còn 4 sự kiện.
 - [ ] Viết lại `docs/cau-truc-thu-muc.md` cho `server/` + `web/` + `netlab/`.
 - [ ] Xóa hoặc gộp `docs/phan-tich-thiet-ke-he-thong.md` — đã bị v2.0 thay thế.
 - [ ] `README.md` — bỏ Supabase/Vercel/Hostinger, thay bằng `docker compose up`.
@@ -142,8 +143,8 @@ Supabase đã bị loại khỏi thiết kế nên blocker cũ không còn.
 
 ## Thứ tự công việc tiếp theo
 
-1. Sửa `docs/api-contract.md` cho khớp v2.
-2. Dựng `modules/documents/` để màn tài liệu bỏ được mock.
+1. Dựng `modules/documents/` để màn tài liệu bỏ được mock.
+2. Dựng `modules/chat/` — SSE `sources → token* → done`.
 3. Dựng `/users` và `/departments` để màn quản trị bỏ được mock.
 4. `docker compose build` để kiểm hai Dockerfile chưa từng chạy.
 5. Dựng `modules/documents/` — upload → parse → chunk → lưu CSDL.

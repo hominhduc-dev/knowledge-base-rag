@@ -1,357 +1,446 @@
-# API Contract — Tàng Thư
+# Hợp đồng API — Tàng Thư
 
-**Chốt 22/08/2026** · Đây là hợp đồng giữa `apps/frontend` và `apps/backend`.
+**Bản v2.0 · viết lại 29/08/2026**
 
-Sửa file này **trước** khi sửa code hai bên, bằng một PR riêng. Đây là tài liệu duy nhất mà cả bốn thành viên đều phụ thuộc: TV3 và TV4 làm song song với Đức dựa trên nó.
+Đây là hợp đồng giữa `web/` và `server/`. Sửa file này **trước** khi sửa code hai bên.
+Đây là tài liệu duy nhất mà cả bốn thành viên đều phụ thuộc: TV2, TV3 và TV4 làm song
+song dựa trên nó.
 
-## Nguyên tắc đã chốt
+Bản tóm tắt một trang nằm ở **Phụ lục A** của `docs/THIET-KE-HE-THONG.md`. File này là
+bản chi tiết; khi hai bên lệch nhau thì **file này đúng**, vì nó được viết từ mã đang
+chạy.
 
-| | Quyết định |
+> **Trạng thái hiện thực.** Chỉ những endpoint đánh dấu ✅ là đã có thật và đã chạy thử.
+> Phần còn lại là đặc tả để làm theo.
+
+| Endpoint | Trạng thái |
 |---|---|
-| Đặt tên khóa JSON | **Giữ tên frontend đang dùng** (`n`, `doc`, `locator`, `excerpt`, `unit`). Chỉ **bổ sung** trường còn thiếu, không đổi tên hàng loạt |
-| `locator` | Trả **cả hai**: `articleRef` và `page` rời, cộng `locator` đã ghép sẵn để hiển thị |
-| SSE | Dùng **event có tên**: `token` · `citation` · `no_source` · `done` · `error` |
-| Marker trích dẫn | **Giữ** `[1]` `[2]` chèn trong câu trả lời, khớp với `Source.n` |
-
-Trường được bổ sung so với mock hiện tại được đánh dấu **`MỚI`**.
+| `GET /health` · `POST /auth/login` · `GET /auth/me` · `PUT /auth/password` | ✅ đã chạy |
+| `POST /search` | ✅ bản tạm — 3 kết quả cứng |
+| `/documents/*` | ⬜ TV2 |
+| `POST /chat` · `/conversations/*` | ⬜ TV3 |
+| `/departments/*` | ⬜ TV4 |
+| `/eval/runs` | ⬜ Đức |
 
 ---
 
-## 1. Quy ước chung
+## 1. Ba quyết định về khuôn dạng
 
-### Địa chỉ và xác thực
+### 1.1 Tên khóa JSON dùng **camelCase**
 
-- Base URL: `NEXT_PUBLIC_API_URL`, mặc định `http://localhost:4000/api`
-- Đường dẫn trong tài liệu này viết **không kèm** tiền tố `/api` vì `apiClient` đã gắn sẵn
-- Mọi request sau đăng nhập gửi kèm `Authorization: Bearer <token>`
-- Token lưu ở `localStorage` khóa `tang-thu-token`
+Phụ lục A phác thảo bằng `snake_case` (`document_id`, `pending_jobs`) theo thói quen đặt
+tên cột SQL. Hiện thực dùng **camelCase** cho toàn bộ JSON.
 
-### Khuôn dạng phản hồi
+Lý do: cả hai đầu đều là TypeScript. Trộn `snake_case` vào JSON buộc frontend phải đổi
+tên ở mọi chỗ chạm dữ liệu, hoặc mang theo một lớp chuyển đổi — thêm việc mà không được
+gì. Ranh giới đổi tên nằm ở tầng truy cập dữ liệu: cột SQL `snake_case`, JSON `camelCase`.
+
+Cụ thể: `pendingJobs` chứ không phải `pending_jobs`; `documentId` chứ không phải
+`document_id`; `conversationId` chứ không phải `conversation_id`.
+
+### 1.2 Mọi phản hồi đều có lớp vỏ
 
 ```jsonc
-// Thành công
+// thành công
 { "success": true, "data": { } }
 
-// Thất bại
+// thất bại
 { "success": false, "error": { "code": "FORBIDDEN_SCOPE", "message": "Tài liệu không thuộc phạm vi của bạn" } }
 ```
 
-| Mã lỗi | HTTP | Khi nào |
-|---|---|---|
-| `UNAUTHENTICATED` | 401 | Thiếu token, token sai hoặc hết hạn |
-| `ACCOUNT_DISABLED` | 403 | Tài khoản bị vô hiệu hóa |
-| `FORBIDDEN_ROLE` | 403 | Vai trò không đủ quyền cho thao tác |
-| `FORBIDDEN_SCOPE` | 403 | Tài nguyên thuộc đơn vị khác |
-| `NOT_FOUND` | 404 | Không tồn tại, hoặc tồn tại nhưng ngoài phạm vi |
-| `VALIDATION_ERROR` | 422 | Dữ liệu vào sai định dạng |
-| `DUPLICATE_DOCUMENT` | 409 | Trùng `contentHash` |
-| `UPSTREAM_ERROR` | 503 | Lỗi từ Gemini hoặc Supabase Storage |
+`apiClient` phía frontend **bóc lớp vỏ này ra**, nên component chỉ thấy phần `data` và
+không phải biết về khuôn dạng. Mọi ví dụ dưới đây mô tả phần `data`.
 
-Phân biệt `FORBIDDEN_ROLE` và `FORBIDDEN_SCOPE` là có chủ đích: một bên là "vai của bạn không được làm việc này", một bên là "việc này thuộc đơn vị khác". Frontend hiển thị hai thông báo khác nhau.
+### 1.3 Trích dẫn giữ marker `[n]` trong câu trả lời
 
-**Lưu ý về `NOT_FOUND` với tài nguyên ngoài phạm vi.** Khi người dùng truy cập tài liệu của đơn vị khác, API trả `403 FORBIDDEN_SCOPE` cho tài nguyên họ *biết là tồn tại* (ví dụ bấm nhầm liên kết cũ), nhưng trả `404 NOT_FOUND` khi liệt kê — tức là tài liệu đơn vị khác không bao giờ xuất hiện trong danh sách. Không dùng 403 ở endpoint liệt kê, vì như vậy là tiết lộ có tồn tại tài liệu đó.
-
-### Thay đổi cần làm ở `api-client.ts`
-
-Hàm hiện tại nuốt hết lỗi thành một chuỗi chung, nên không phân biệt được `FORBIDDEN_ROLE` với `FORBIDDEN_SCOPE`. Cần sửa ba chỗ:
-
-```ts
-export class ApiError extends Error {
-  constructor(public code: string, message: string, public status: number) { super(message); }
-}
-
-export async function apiClient<T>(path: string, init: RequestInit = {}): Promise<T> {
-  // ... giữ nguyên phần dựng headers
-  const body = await response.json();
-  if (!response.ok || body.success === false) {
-    throw new ApiError(body?.error?.code ?? "UNKNOWN", body?.error?.message ?? "Lỗi không xác định", response.status);
-  }
-  return body.data as T;   // bóc lớp vỏ, component không phải biết
-}
-```
-
-Đây là thay đổi duy nhất bắt buộc ở frontend ngoài việc bỏ mock data.
+Marker `[1]` `[2]` được chèn thẳng trong văn bản trả lời, khớp với `Source.n`.
 
 ---
 
-## 2. Kiểu dữ liệu dùng chung
+## 2. Quy ước chung
 
-Đặt trong `packages/shared/src/dto/`.
+### Địa chỉ và xác thực
+
+- Base URL lấy từ `NEXT_PUBLIC_API_URL`.
+  - Qua Docker/Caddy: **`/api`** — đường dẫn tương đối, có chủ đích. Trình duyệt tự dùng
+    đúng máy nó vừa tải trang, nên chạy đúng cho localhost, IP LAN và cả đường hầm tạm
+    mà không phải build lại. Đây là cách gỡ tận gốc lỗi demo LAN phổ biến nhất.
+  - Chạy `pnpm dev` trên máy: `http://localhost:4000/api`, vì giao diện ở cổng 3000 còn
+    API ở 4000 — hai gốc khác nhau.
+- Đường dẫn trong tài liệu này viết **không kèm** tiền tố `/api`; `apiClient` gắn sẵn.
+- Mọi request sau đăng nhập gửi kèm `Authorization: Bearer <token>`.
+- Token lưu ở `localStorage`, khóa `tang-thu-token`.
+
+### Bảng mã lỗi
+
+| Mã | HTTP | Khi nào |
+|---|---|---|
+| `UNAUTHENTICATED` | 401 | Thiếu token, token sai hoặc hết hạn |
+| `ACCOUNT_DISABLED` | 403 | `users.is_active = false` |
+| `FORBIDDEN_ROLE` | 403 | Vai không đủ quyền cho thao tác |
+| `FORBIDDEN_SCOPE` | 403 | Tài nguyên thuộc đơn vị khác |
+| `NOT_FOUND` | 404 | Không tồn tại, hoặc tồn tại nhưng ngoài phạm vi khi liệt kê |
+| `DUPLICATE_DOCUMENT` | 409 | Trùng `fileHash` |
+| `VALIDATION_ERROR` | 422 | Dữ liệu vào sai định dạng |
+| `UPSTREAM_ERROR` | 503 | Lỗi từ cơ sở dữ liệu hoặc dịch vụ mô hình |
+| `INTERNAL_ERROR` | 500 | Lỗi ngoài dự kiến |
+
+Phía client `apiClient` còn sinh thêm hai mã cục bộ, **không** đến từ máy chủ:
+`NETWORK_ERROR` (không kết nối được) và `INVALID_RESPONSE` (phản hồi không phải JSON,
+thường là trang lỗi của reverse proxy).
+
+**Phân biệt `FORBIDDEN_ROLE` và `FORBIDDEN_SCOPE` là có chủ đích.** Một bên là "vai của
+bạn không được làm việc này", một bên là "việc này thuộc đơn vị khác". Cả hai đều là
+HTTP 403, nên nếu chỉ giữ mã trạng thái thì không phân biệt được — đó là lý do `ApiError`
+giữ nguyên trường `code`.
+
+**`404` với tài nguyên ngoài phạm vi.** Khi người dùng truy cập tài liệu của đơn vị khác,
+API trả `403 FORBIDDEN_SCOPE` cho tài nguyên họ *biết là tồn tại* (bấm nhầm liên kết cũ),
+nhưng endpoint **liệt kê** không bao giờ trả 403 — tài liệu đơn vị khác đơn giản là
+không xuất hiện. Trả 403 khi liệt kê là tiết lộ có tồn tại tài liệu đó.
+
+### `details` của lỗi kiểm tra dữ liệu
+
+`VALIDATION_ERROR` kèm mảng `details` để frontend tô đúng ô nhập:
+
+```jsonc
+{ "success": false, "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "account: Vui lòng nhập tài khoản trường",
+    "details": [
+      { "field": "account",  "message": "Vui lòng nhập tài khoản trường" },
+      { "field": "password", "message": "Vui lòng nhập mật khẩu" }
+    ] } }
+```
+
+`details` **luôn được gửi, kể cả ở production** — đó là lỗi biểu mẫu của chính người
+dùng, và tên trường ở đây là tên trong thân request họ vừa gửi, không phải tên cột CSDL.
+
+---
+
+## 3. Kiểu dữ liệu dùng chung
 
 ### `Source` — một trích dẫn
 
 ```ts
 type Source = {
-  n: number;            // số thứ tự, khớp marker [1] trong câu trả lời
+  n: number;            // số thứ tự, khớp marker [n] trong câu trả lời
   doc: string;          // tiêu đề tài liệu
   locator: string;      // "Điều 12, Khoản 1 · Trang 8" — backend ghép sẵn
   excerpt: string;      // đoạn trích hiển thị
-  unit: string;         // "Toàn trường" hoặc tên khoa
-  documentId: string;   // MỚI — để gọi /documents/:id/source-url
-  chunkId: string;      // MỚI — phục vụ gỡ lỗi và bộ đánh giá
-  articleRef: string | null;  // MỚI — "Điều 12, Khoản 1"
-  page: number | null;        // MỚI — mở PDF đúng trang qua #page=N
-  score: number;              // MỚI — điểm truy hồi, mặc định ẩn trên giao diện
+  unit: string;         // "Toàn trường" hoặc tên đơn vị
+  documentId: string;   // để gọi /documents/:id/file
+  chunkId: string;      // phục vụ gỡ lỗi và bộ đánh giá
+  headingPath: string | null;  // "Chương II > Điều 12 > Khoản 3"
+  page: number | null;         // mở PDF đúng trang qua #page=N
+  score: number;               // điểm truy hồi, mặc định ẩn trên giao diện
 };
 ```
 
-`unit` là chuỗi hiển thị: `scope = GLOBAL` trả `"Toàn trường"`, ngược lại trả tên đơn vị.
+`unit` là chuỗi hiển thị: tài liệu toàn trường (`documents.departmentId = null`) trả
+`"Toàn trường"`, ngược lại trả tên đơn vị.
 
-`locator` ghép theo quy tắc: `articleRef` + `" · Trang "` + `page`. Thiếu `articleRef` thì chỉ `"Trang N"`; thiếu cả hai thì `"Không rõ vị trí"`.
+`locator` ghép theo quy tắc: `headingPath` + `" · Trang "` + `page`. Thiếu `headingPath`
+thì chỉ `"Trang N"`; thiếu cả hai thì `"Không rõ vị trí"`. Backend ghép sẵn bằng
+`buildLocator()` — **đừng ghép tay ở chỗ khác**, nếu không hai nơi sẽ hiển thị khác nhau
+cho cùng một đoạn văn.
+
+> **Đổi tên so với v1:** trường `articleRef` nay là **`headingPath`**, khớp cột
+> `chunks.heading_path`. Nội dung cũng khác: nay là đường dẫn cấu trúc đầy đủ, không chỉ
+> số điều.
 
 ### `KnowledgeDocument` — một tài liệu trong danh sách
 
 ```ts
-type DocumentStatus = "pending" | "processing" | "ready" | "error";  // MỚI: thêm "pending"
+type DocumentStatus = "pending" | "processing" | "ready" | "failed";
 
 type KnowledgeDocument = {
-  id: string;           // MỚI — uuid, dùng trong mọi URL
-  name: string;         // tiêu đề
-  code: string | null;  // số hiệu văn bản, có thể rỗng
-  unit: string;
+  id: string;
+  name: string;               // documents.title
+  unit: string;               // "Toàn trường" hoặc tên đơn vị
   status: DocumentStatus;
-  chunks: number;
-  updated: string;      // ĐỔI ĐỊNH DẠNG — ISO 8601, frontend tự format dd/MM/yyyy
-  scope: "GLOBAL" | "DEPARTMENT";   // MỚI — cho bộ lọc "Của khoa" / "Toàn trường"
-  approval: "proposed" | "approved" | "rejected";  // MỚI
-  canEdit: boolean;     // MỚI — backend đã tính sẵn, frontend không tự suy từ vai
+  chunks: number;             // số đoạn đã cắt được
+  updated: string;            // ISO 8601, frontend tự format dd/MM/yyyy
+  isGlobal: boolean;          // departmentId === null
+  canEdit: boolean;           // backend tính sẵn
 };
 ```
 
 Ba điểm cần chú ý:
 
-**`id` thay `code` làm định danh.** Mock hiện dùng `code` làm khóa (`documentChunks` được đánh chỉ mục bằng `code`). Nhưng `code` có thể rỗng và không bảo đảm duy nhất, nên mọi URL dùng `id`.
+**`id` là định danh, không phải số hiệu văn bản.** Mọi URL dùng `id`.
 
-**`updated` đổi sang ISO 8601.** Mock đang là `"12/08/2026"`. API trả `"2026-08-12T09:30:00Z"` vì chuỗi dd/MM/yyyy không sắp xếp được và mơ hồ về múi giờ. Frontend format khi hiển thị.
+**`updated` là ISO 8601.** Chuỗi `dd/MM/yyyy` không sắp xếp được và mơ hồ về múi giờ.
 
-**`canEdit` do backend tính.** Frontend không tự suy "vai EDITOR thì hiện nút sửa" — vì còn phụ thuộc tài liệu có thuộc đơn vị của người đó không. Backend biết cả hai, frontend chỉ đọc cờ.
+**`canEdit` do backend tính.** Frontend **không** tự suy "vai ADMIN thì hiện nút sửa" —
+với mô hình hai vai thì ADMIN sửa được mọi tài liệu, nhưng quy tắc đó có thể đổi. Backend
+biết cả vai lẫn phạm vi; frontend chỉ đọc cờ.
 
-### `ChunkItem` — một đoạn văn
+> **Bỏ so với v1:** `code` (số hiệu văn bản), `scope`, `approval`. Lược đồ v2 không còn
+> cột `doc_number` và không còn luồng duyệt tài liệu.
+
+### `ChunkItem`, `DepartmentItem`, `UserItem`
 
 ```ts
 type ChunkItem = {
   id: string;
   locator: string;
   text: string;
-  articleRef: string | null;  // MỚI
-  page: number | null;        // MỚI
-  index: number;              // MỚI — thứ tự trong tài liệu
+  headingPath: string | null;
+  pageFrom: number | null;
+  pageTo: number | null;
+  index: number;              // chunkIndex, thứ tự trong tài liệu
 };
-```
 
-### `DepartmentItem` và `UserItem`
-
-```ts
 type DepartmentItem = {
-  id: string;      // MỚI
-  code: string;    // MỚI — CNTT, KT, PDT
+  id: string;
+  code: string;               // CNTT, KTR, PDT
   name: string;
-  kind: string;    // "Khoa" hoặc "Phòng ban"
-  docs: number;
-  users: number;
-  staff: string | null;
+  type: "FACULTY" | "OFFICE";
+  docs: number;               // số đếm, chỉ ADMIN thấy
+  members: number;
 };
 
 type UserItem = {
-  id: string;          // MỚI
-  code: string | null; // MỚI — MSSV hoặc mã cán bộ, dùng để đăng nhập
+  id: string;
+  code: string | null;        // MSSV hoặc mã cán bộ
   name: string;
   email: string;
-  role: string;        // hiển thị: "Sinh viên" | "Giảng viên" | "Giáo vụ khoa" | "Quản trị viên"
-  roleCode: "VIEWER" | "CONTRIBUTOR" | "EDITOR" | "ADMIN";  // MỚI — dùng cho logic
-  scope: string;       // tên đơn vị
-  departmentId: string;  // MỚI
-  isActive: boolean;     // MỚI
+  isActive: boolean;
+  memberships: Membership[];  // MỘT người có thể thuộc NHIỀU đơn vị
+};
+
+type Membership = {
+  departmentId: string;
+  code: string;
+  name: string;
+  roleCode: "STUDENT" | "ADMIN";
 };
 ```
 
-Hai lưu ý:
-
-**`kind` rút gọn.** Mock ghi `"Khoa · 4 bộ môn"`, nhưng bộ môn không được mô hình hóa trong `schema.prisma`. API trả `"Khoa"` hoặc `"Phòng ban"`; nếu muốn giữ hiển thị cũ thì frontend tự ghép thêm.
-
-**`staff` là trường suy ra**, không có cột tương ứng: backend lấy `fullName` của EDITOR đầu tiên trong đơn vị, không có thì trả `null`.
+**`UserItem` không có trường `role` phẳng.** Vai gắn với **từng** tư cách thành viên, nên
+một người có thể là ADMIN ở phòng ban mình và STUDENT ở nơi khác. Vai hiệu dụng được gộp
+lại phía máy chủ (`effectiveRole`) và chỉ xuất hiện ở `/auth/me`, chỗ nói về *chính người
+đang đăng nhập*.
 
 ---
 
-## 3. Xác thực
+## 4. Xác thực ✅
 
-Hệ thống **không có đăng ký**. Tài khoản do ADMIN cấp.
+Hệ thống **không có đăng ký**. Tài khoản do ADMIN cấp — xem `docs/phan-quyen.md` mục 2.
 
-### `POST /auth/login`
+### `POST /auth/login` ✅
 
-Người dùng đăng nhập bằng **mã số sinh viên hoặc email trường** — một ô nhập duy nhất, giao diện đã đặt nhãn "Tài khoản trường".
+Đăng nhập bằng **mã số sinh viên hoặc email trường** — một ô nhập duy nhất.
 
 ```jsonc
 // request — `account` nhận cả hai dạng
-{ "account": "2151050123", "password": "..." }
-{ "account": "minh.n@sv.dau.edu.vn", "password": "..." }
+{ "account": "2351220193", "password": "..." }
+{ "account": "duc_2351220193@dau.edu.vn", "password": "..." }
 
 // data
 {
   "token": "eyJhbGci...",
   "user": {
-    "id": "uuid", "code": "2151050123", "name": "Nguyễn Minh",
-    "email": "minh.n@sv.dau.edu.vn",
-    "role": "Sinh viên", "roleCode": "VIEWER",
-    "scope": "Khoa Công nghệ Thông tin", "departmentId": "uuid"
-  }
+    "id": "ef995366-...", "code": "2351220193", "name": "Hồ Minh Đức",
+    "email": "duc_2351220193@dau.edu.vn",
+    "role": "Sinh viên", "roleCode": "STUDENT",
+    "scope": "Khoa Công nghệ Thông tin"
+  },
+  "memberships": [
+    { "departmentId": "165c73c7-...", "code": "CNTT",
+      "name": "Khoa Công nghệ Thông tin", "roleCode": "STUDENT" }
+  ]
 }
 ```
 
-**Cách phân biệt hai dạng:** có ký tự `@` thì coi là email, ngược lại coi là mã. Không cần người dùng chọn.
+> Phụ lục A chỉ ghi đăng nhập bằng email. Hiện thực nhận **cả hai** — cột `users.code` và
+> logic phân biệt bằng dấu `@` đã có và chạy được.
 
-**Chuẩn hóa trước khi tra:** email đưa về chữ thường, mã đưa về chữ hoa. Cơ sở dữ liệu có chỉ mục duy nhất trên `lower(email)` và trên `code` nên không bao giờ mơ hồ.
+**Cách phân biệt:** có ký tự `@` thì coi là email, ngược lại coi là mã. **Chuẩn hóa
+trước khi tra:** email về chữ thường, mã về chữ hoa. Cả `users.code` lẫn chỉ mục duy nhất
+trên `lower(email)` đều bảo đảm không mơ hồ.
 
-Lỗi: `401 UNAUTHENTICATED` (sai tài khoản hoặc mật khẩu — **thông báo giống hệt nhau cho cả hai trường hợp**, không tiết lộ mã hay email nào có thật) · `403 ACCOUNT_DISABLED`.
+`user.scope` là chuỗi hiển thị: ADMIN nhận `"Toàn trường"`, còn lại là tên các đơn vị nối
+bằng ` · `.
 
-**Frontend cần sửa:** trong `LoginForm.tsx`, biến state đang tên `email` — đổi thành `account` cho khỏi hiểu nhầm, vì ô đó giờ nhận cả mã số sinh viên. Nhãn hiển thị "Tài khoản trường" giữ nguyên, chỉ đổi placeholder thành `2151050123 hoặc minh.n@sv.dau.edu.vn`.
+Lỗi:
 
-### `GET /auth/me`
+- `401 UNAUTHENTICATED` — sai tài khoản **hoặc** sai mật khẩu. **Thông báo giống hệt
+  nhau cho cả hai trường hợp**, không tiết lộ mã hay email nào có thật. Máy chủ còn chạy
+  một lần `bcrypt.compare` trên hash giả ở nhánh "không tìm thấy tài khoản", để thời gian
+  phản hồi cũng không tiết lộ.
+- `403 ACCOUNT_DISABLED` — kiểm **sau** khi đã xác nhận mật khẩu đúng; kiểm trước là cho
+  phép dò tài khoản nào đang bị khóa mà không cần biết mật khẩu.
 
-Trả đúng object `user` như trên. Dùng để khôi phục phiên khi tải lại trang.
+### `GET /auth/me` ✅
 
-### `PUT /auth/password`
+Trả `{ user, memberships }` — cùng khuôn như trên, không có `token`.
+
+> Phụ lục A ghi `{ user, role, memberships[] }`. Bỏ `role` ở tầng ngoài vì nó đã nằm
+> trong `user.roleCode`; hai chỗ giữ cùng một giá trị là hai cơ hội lệch nhau.
+
+Dùng để khôi phục phiên khi tải lại trang. **Frontend phải gọi endpoint này thay vì tin
+vào hồ sơ trong `localStorage`**: ADMIN có thể đã đổi vai hoặc vô hiệu hóa tài khoản
+trong lúc người dùng đang mở tab, và tin bản lưu là giữ nguyên quyền cũ tới bảy ngày.
+
+### `PUT /auth/password` ✅
 
 ```jsonc
-{ "currentPassword": "...", "newPassword": "..." }
+{ "currentPassword": "...", "newPassword": "..." }   // → { "changed": true }
 ```
 
-Trả `{ "success": true, "data": { "changed": true } }`. Lỗi `422 VALIDATION_ERROR` nếu mật khẩu mới dưới 8 ký tự.
+- `422 VALIDATION_ERROR` nếu mật khẩu mới dưới 8 ký tự, dài quá 72 byte (giới hạn bcrypt),
+  hoặc trùng mật khẩu cũ.
+- **Mật khẩu hiện tại sai cũng trả `422`, không phải `401`.** Người gọi đang đăng nhập
+  hợp lệ, chỉ điền sai một ô; trả 401 sẽ khiến frontend đá họ ra màn đăng nhập.
 
 ---
 
-## 4. Hỏi đáp
+## 5. Hỏi đáp ⬜
 
-### `POST /chat/stream` — Server-Sent Events
+### `POST /chat` — Server-Sent Events
 
 ```jsonc
-// request
-{ "question": "Điều kiện xét tốt nghiệp là gì?", "conversationId": "uuid | null" }
+{ "question": "Điều kiện xét tốt nghiệp là gì?", "conversationId": null }
 ```
 
-Phản hồi `Content-Type: text/event-stream`, năm loại sự kiện:
+Phản hồi `Content-Type: text/event-stream`. **Bốn** loại sự kiện, theo thứ tự
+`sources` → `token`* → `done`:
 
 ```
+event: sources
+data: {"items":[{"n":1,"doc":"Quy chế đào tạo trình độ đại học","locator":"Điều 12, Khoản 1 · Trang 8","excerpt":"Sinh viên được xét công nhận tốt nghiệp khi...","unit":"Toàn trường","documentId":"...","chunkId":"...","headingPath":"Điều 12, Khoản 1","page":8,"score":0.83}]}
+
 event: token
 data: {"text":"Sinh viên được xét tốt nghiệp khi tích lũy đủ"}
 
-event: citation
-data: {"n":1,"doc":"Quy chế đào tạo trình độ đại học","locator":"Điều 12, Khoản 1 · Trang 8","excerpt":"Sinh viên được xét công nhận tốt nghiệp khi...","unit":"Toàn trường","documentId":"uuid","chunkId":"uuid","articleRef":"Điều 12, Khoản 1","page":8,"score":0.83}
-
-event: no_source
-data: {"message":"Không tìm thấy thông tin này trong tài liệu của đơn vị bạn."}
-
 event: done
-data: {"messageId":"uuid","conversationId":"uuid","latencyMs":2840}
+data: {"messageId":"...","conversationId":"...","latencyMs":2840}
 
 event: error
 data: {"code":"UPSTREAM_ERROR","message":"Dịch vụ mô hình tạm thời không phản hồi"}
 ```
 
-**Thứ tự sự kiện.** Các `token` đến trước, rồi toàn bộ `citation` theo thứ tự `n` tăng dần, cuối cùng là `done`. Frontend hiển thị dần phần chữ và chỉ kích hoạt marker `[n]` sau khi nhận được `citation` tương ứng.
+**`sources` gửi TRƯỚC token đầu tiên.** Giao diện dựng panel nguồn ngay lúc đó, nên người
+dùng thấy hệ thống dựa vào tài liệu nào **trước cả khi** đọc câu trả lời — chi tiết nhỏ
+nhưng củng cố trực tiếp thông điệp minh bạch của sản phẩm.
 
-**Trường hợp không có nguồn.** Backend gửi `no_source` rồi `done`, **không gửi `token` nào và không gọi Gemini sinh câu trả lời**. Đây là ràng buộc bắt buộc — gọi mô hình khi không có ngữ cảnh thì nó sẽ trả lời bằng kiến thức chung, đúng cái sai nguy hiểm nhất mà đề tài đặt ra để giải quyết.
+> **Khác v1:** v1 dùng năm sự kiện với `citation` gửi từng cái **sau** phần chữ, và một
+> sự kiện `no_source` riêng. v2 gộp mọi trích dẫn vào một sự kiện `sources` gửi **trước**,
+> đúng phụ lục A.
 
-**Ràng buộc marker.** Backend kiểm tra mọi marker `[n]` trong văn bản đều có `citation` tương ứng. Nếu mô hình bịa `[4]` trong khi chỉ có 3 nguồn, backend gỡ marker đó khỏi văn bản trước khi gửi đi.
+**Trường hợp không có nguồn.** Backend gửi `sources` với mảng rỗng, rồi một `token` duy
+nhất chứa câu từ chối, rồi `done`. **Không gọi mô hình sinh câu trả lời.** Đây là ràng
+buộc bắt buộc — gọi mô hình khi không có ngữ cảnh thì nó trả lời bằng kiến thức chung,
+đúng cái sai nguy hiểm nhất mà đề tài đặt ra để giải quyết.
 
-**Giới hạn.** `question` từ 3 đến 500 ký tự, ngoài khoảng trả `422 VALIDATION_ERROR`.
+**Ràng buộc marker.** Backend kiểm mọi marker `[n]` trong văn bản đều có nguồn tương ứng.
+Nếu mô hình bịa `[4]` trong khi chỉ có 3 nguồn, backend **gỡ marker đó** khỏi văn bản
+trước khi gửi. Prompt là gợi ý; mã nguồn là ràng buộc.
 
-### `GET /conversations`
+**Giới hạn.** `question` từ 3 đến 500 ký tự, ngoài khoảng trả `422`.
+
+**Lưu ý triển khai:** Caddy phải đặt `flush_interval -1` cho `/api/*`, nếu không nó giữ
+token lại và câu trả lời hiện ra một cục ở cuối thay vì chảy dần. Đã cấu hình sẵn.
+
+### `GET /conversations` · `GET /conversations/:id` ⬜
 
 ```jsonc
-{ "items": [ { "id": "uuid", "title": "Điều kiện nhận đồ án tốt nghiệp", "when": "2026-08-22T03:10:00Z" } ] }
-```
+// GET /conversations
+{ "items": [ { "id": "...", "title": "Điều kiện nhận đồ án", "updatedAt": "2026-08-29T03:10:00Z" } ] }
 
-Mock đang dùng `when` là chuỗi `"Hôm nay"` / `"18/08"`. API trả ISO, frontend tự quy đổi sang "Hôm nay" / "Hôm qua".
-
-### `GET /conversations/:id`
-
-```jsonc
-{
-  "id": "uuid", "title": "...",
+// GET /conversations/:id
+{ "id": "...", "title": "...",
   "messages": [
-    { "id": "uuid", "role": "user", "content": "Điều kiện xét tốt nghiệp là gì?" },
-    { "id": "uuid", "role": "assistant", "content": "Sinh viên được xét... [1]", "sources": [ /* Source[] */ ] }
-  ]
-}
+    { "id": "...", "role": "user", "content": "Điều kiện xét tốt nghiệp là gì?" },
+    { "id": "...", "role": "assistant", "content": "Sinh viên được xét... [1]", "sources": [ /* Source[] */ ] }
+  ] }
 ```
 
 Chỉ trả hội thoại của chính người gọi. Hội thoại của người khác trả `404 NOT_FOUND`.
 
 ---
 
-## 5. Tài liệu
+## 6. Tài liệu ⬜
 
 ### `GET /documents`
 
-Tham số: `q` (tìm theo tên hoặc số hiệu) · `scope` = `all` \| `department` \| `global` (ứng với bộ lọc "Tất cả" / "Của khoa" / "Toàn trường") · `status` · `page` · `pageSize`.
+Tham số: `q` (tìm theo tên) · `scope` = `all` \| `department` \| `global` · `status` ·
+`page` · `pageSize`.
 
 ```jsonc
 { "items": [ /* KnowledgeDocument[] */ ], "total": 7, "page": 1, "pageSize": 20 }
 ```
 
-**Bắt buộc:** danh sách chỉ chứa tài liệu `scope = GLOBAL` hoặc thuộc đơn vị của người gọi. Bộ lọc nằm trong SQL, không lọc ở tầng ứng dụng sau khi đã lấy dữ liệu.
+**Bắt buộc:** danh sách chỉ chứa tài liệu toàn trường hoặc thuộc đơn vị của người gọi.
+**Bộ lọc nằm trong SQL**, lấy từ `server/src/lib/scope.ts` — không lọc ở tầng ứng dụng
+sau khi đã lấy dữ liệu.
 
-### `GET /documents/:id`
-
-Trả `KnowledgeDocument` kèm `fileSize`, `mimeType`, `pageCount`, `issuedDate`, `uploadedBy`, `approvedBy`.
-
-### `GET /documents/:id/chunks`
+### `GET /documents/:id` · `GET /documents/:id/chunks`
 
 ```jsonc
+// GET /documents/:id
+{ "document": { /* KnowledgeDocument */ , "fileSize": 0, "sourceType": "PDF", "pageCount": 24 },
+  "chunkCount": 6,
+  "job": { "status": "DONE", "retryCount": 0, "lastError": null } }
+
+// GET /documents/:id/chunks
 { "items": [ /* ChunkItem[] */ ], "total": 142 }
 ```
 
-### `GET /documents/:id/source-url`
+### `GET /documents/:id/file`
 
-```jsonc
-{ "url": "https://...supabase.co/storage/v1/object/sign/...", "expiresIn": 300, "page": 8 }
-```
+Trả **chính nội dung file**, không phải một URL.
+
+> **Khác v1:** v1 có `/documents/:id/source-url` trả signed URL của Supabase Storage. v2
+> lưu file trong volume `uploads` của Docker, nên backend kiểm phạm vi rồi **truyền thẳng
+> nội dung**. Không phục vụ thư mục đó qua Caddy — làm vậy là bỏ qua toàn bộ kiểm soát,
+> đoán được đường dẫn là đọc được tài liệu đơn vị khác.
 
 Tham số tùy chọn `?page=8` để frontend nối `#page=8` khi mở.
 
-Backend **kiểm tra lại phạm vi trước khi cấp URL**. Bucket để private; nếu để public thì dù SQL lọc đúng, đoán được đường dẫn là đọc được tài liệu đơn vị khác.
+### `POST /documents` — ADMIN
 
-### `POST /documents` — EDITOR
-
-`multipart/form-data`: `file` (PDF hoặc DOCX, tối đa 20 MB) · `title` · `code` · `issuedDate` · `scope`.
+`multipart/form-data`: `file` (PDF hoặc DOCX, tối đa 20 MB) · `title` · `departmentId`
+(bỏ trống nghĩa là toàn trường).
 
 ```jsonc
 // 202 Accepted
-{ "id": "uuid", "status": "pending", "jobId": "uuid" }
+{ "documentId": "...", "status": "pending", "jobId": "..." }
 ```
 
-Lỗi: `403 FORBIDDEN_ROLE` · `403 FORBIDDEN_SCOPE` (chọn phạm vi ngoài đơn vị mình) · `409 DUPLICATE_DOCUMENT` · `422 VALIDATION_ERROR`.
+Lỗi: `403 FORBIDDEN_ROLE` · `409 DUPLICATE_DOCUMENT` (trùng `fileHash`) · `422`.
 
 ### `GET /documents/:id/status`
 
-Cho thanh tiến trình của `UploadItem`:
+Cho thanh tiến trình:
 
 ```jsonc
 { "status": "processing", "phase": "process", "progress": 62, "chunks": 88, "error": null }
 ```
 
-`phase` nhận `"upload"` \| `"process"` \| `"done"`, khớp đúng kiểu `UploadItem` frontend đang dùng.
+`phase` nhận `"upload"` \| `"process"` \| `"done"`.
 
 ### Các thao tác còn lại
 
 | Method | Đường dẫn | Vai | Ghi chú |
 |---|---|---|---|
-| `PATCH` | `/documents/:id` | EDITOR | Sửa `title`, `code`, `issuedDate` |
-| `DELETE` | `/documents/:id` | EDITOR | Xóa mềm hay xóa cứng — xem ghi chú cuối mục |
-| `POST` | `/documents` với `scope` của khoa | CONTRIBUTOR | Tạo ở trạng thái `proposed` |
-| `POST` | `/documents/:id/approve` | EDITOR | Chuyển sang `approved` |
-| `POST` | `/documents/:id/reject` | EDITOR | Body `{ "reason": "..." }` |
+| `PATCH` | `/documents/:id` | ADMIN | Sửa `title`, `departmentId` |
+| `DELETE` | `/documents/:id` | ADMIN | → 204 |
+| `POST` | `/documents/:id/retry` | ADMIN | → 202, đưa job `FAILED` về `PENDING` |
 
-Chỉ tài liệu `approval = approved` mới tham gia truy hồi. Điều kiện này nằm trong câu SQL.
+**Đổi `departmentId` sẽ tự động đồng bộ xuống `chunks`** nhờ trigger trong CSDL — xem
+`docs/erd.md` mục 2.1. Không cần cập nhật tay.
 
 ---
 
-## 6. Truy hồi
+## 7. Truy hồi ✅ (bản tạm)
 
 ### `POST /search`
 
-Endpoint phục vụ gỡ lỗi và bộ đánh giá, không dùng ở giao diện chính.
+Endpoint phục vụ gỡ lỗi và bộ đánh giá, không dùng ở giao diện chính. **Bắt buộc đăng
+nhập** — phạm vi truy hồi phụ thuộc người gọi.
 
 ```jsonc
 // request
@@ -361,79 +450,107 @@ Endpoint phục vụ gỡ lỗi và bộ đánh giá, không dùng ở giao di�
 { "items": [ /* Source[] */ ], "tookMs": 240, "vectorHits": 6, "keywordHits": 4 }
 ```
 
-`vectorHits` và `keywordHits` cho thấy mỗi nhánh của tìm kiếm lai đóng góp bao nhiêu — hữu ích khi giải thích lúc bảo vệ.
+`vectorHits` và `keywordHits` cho thấy mỗi nhánh của tìm kiếm lai đóng góp bao nhiêu —
+hữu ích khi giải thích lúc bảo vệ.
 
-Tuần 1 endpoint này trả **3 kết quả cứng** để TV3 và TV4 làm được ngay, không phải chờ truy hồi thật.
+> **Bản tạm hiện tại trả 3 kết quả cứng** và báo `vectorHits: 0`, `keywordHits: 0` — cố ý
+> báo 0 thay vì bịa số, để lúc bảo vệ không ai nhầm đây là số đo thật. `unit` của kết quả
+> thứ ba luôn là đơn vị của **chính người gọi**, không phải một tên khoa cứng: để tên
+> cứng thì mọi tài khoản đều thấy tài liệu khoa khác và người kiểm thử sẽ tưởng cơ chế
+> cách ly đã hỏng.
+
+`query` từ 3 đến 500 ký tự; `topK` từ 1 đến 20.
 
 ---
 
-## 7. Quản trị
+## 8. Quản trị ⬜
 
 ### Đơn vị
 
-| Method | Đường dẫn | Vai |
-|---|---|---|
-| `GET` | `/departments` | VIEWER — trả danh sách rút gọn `{id, code, name}` |
-| `GET` | `/departments/full` | ADMIN — trả `DepartmentItem[]` đầy đủ kèm số đếm |
-| `POST` | `/departments` | ADMIN |
-| `PATCH` | `/departments/:id` | ADMIN |
+| Method | Đường dẫn | Vai | Ghi chú |
+|---|---|---|---|
+| `GET` | `/departments` | STUDENT | Danh sách rút gọn `{id, code, name}` |
+| `GET` | `/departments/full` | ADMIN | `DepartmentItem[]` đầy đủ kèm số đếm |
+| `POST` | `/departments` | ADMIN | |
+| `PATCH` | `/departments/:id` | ADMIN | |
 
-VIEWER cần `/departments` để hiển thị tên đơn vị, nhưng không được thấy số lượng tài liệu và người dùng của đơn vị khác — vì vậy tách làm hai endpoint.
+Tách làm hai endpoint vì STUDENT cần tên đơn vị để hiển thị, nhưng **không được thấy số
+lượng tài liệu và người dùng của đơn vị khác**.
 
-### Người dùng
+### Người dùng và tư cách thành viên
 
 | Method | Đường dẫn | Vai | Ghi chú |
 |---|---|---|---|
-| `GET` | `/users` | EDITOR | Chỉ người dùng trong đơn vị mình; ADMIN thấy tất cả |
-| `POST` | `/users` | ADMIN | Body `{ name, email, roleCode, departmentId, tempPassword }` |
-| `PATCH` | `/users/:id` | ADMIN | Đổi `roleCode` hoặc `departmentId` |
-| `PATCH` | `/users/:id/disable` | ADMIN | Body `{ "isActive": false }` |
+| `GET` | `/users` | ADMIN | `UserItem[]` |
+| `POST` | `/users` | ADMIN | `{ name, email, code, tempPassword }` |
+| `PATCH` | `/users/:id` | ADMIN | Đổi `isActive` |
+| `POST` | `/departments/:id/members` | ADMIN | `{ userId, roleCode }` → 201 |
+| `DELETE` | `/departments/:id/members/:userId` | ADMIN | → 204 |
+
+**Gán vai đi qua tư cách thành viên, không qua người dùng.** Vì một người có thể thuộc
+nhiều đơn vị với vai khác nhau, "đổi vai" thật ra là sửa một dòng `department_members` —
+vì vậy nó nằm dưới `/departments/:id/members` chứ không phải `PATCH /users/:id`.
+
+**Không xóa người dùng**, chỉ đặt `isActive = false`. Xóa làm gãy khóa ngoại từ
+`documents.uploadedBy` và `conversations.userId`.
 
 ### Ma trận quyền
 
-**Không cần endpoint.** Ma trận là hằng số, đặt trong `packages/shared/src/roles.ts` để hai bên dùng chung. Màn `/admin/permissions` đọc trực tiếp từ đó.
+**Không cần endpoint.** Ma trận là hằng số, đặt ở `web/src/features/admin/permissions.ts`.
+Gọi API để lấy một thứ không bao giờ đổi là thêm một điểm hỏng mà không được gì.
+
+*Khi dựng `packages/shared/` thì chuyển sang đó để hai bên dùng chung một định nghĩa.*
 
 ---
 
-## 8. Bộ đánh giá — ADMIN
+## 9. Bộ đánh giá ⬜ — ADMIN
 
 | Method | Đường dẫn | Ghi chú |
 |---|---|---|
-| `POST` | `/eval/runs` | Body là cấu hình cắt đoạn; chạy nền, trả `runId` |
-| `GET` | `/eval/runs` | Danh sách các lần chạy kèm `recallAt5`, `recallAt10`, `mrr` |
+| `POST` | `/eval/runs` | Body là cấu hình cắt đoạn và truy hồi; chạy nền, trả `{ runId }` |
+| `GET` | `/eval/runs` | Danh sách kèm `recallAt5`, `recallAt10`, `mrr`, `faithfulness` |
 | `GET` | `/eval/runs/:id` | Chi tiết từng câu hỏi |
 
+Tiêu chí thành công số 4: bảng `eval_runs` phải có ít nhất **9 dòng** để so sánh.
+
 ---
 
-## 9. Bảng đối chiếu — frontend bỏ mock thế nào
+## 10. Sức khỏe ✅
 
-| Mock hiện tại | Thay bằng | Ai làm |
+### `GET /health`
+
+```jsonc
+{ "status": "ok", "uptime": 1233, "pendingJobs": 0 }
+```
+
+`uptime` tính bằng giây. Endpoint này **chạm cơ sở dữ liệu** (đếm job đang chờ), nên nó
+phân biệt được "tiến trình còn sống" với "còn nói chuyện được với CSDL" — bộ cân bằng tải
+nhờ đó rút đúng node hỏng. Khi CSDL không tới được, trả `503 UPSTREAM_ERROR`.
+
+---
+
+## 11. Bảng đối chiếu — frontend bỏ mock thế nào
+
+| Mock hiện tại | Thay bằng | Trạng thái |
 |---|---|---|
-| `mockAnswer()` | `POST /chat/stream` | TV3 |
+| `useAuth` với `demoUsers` | `POST /auth/login` + `GET /auth/me` | ✅ **xong** |
+| `permissions` | Hằng số `features/admin/permissions.ts` | ✅ **xong** |
+| `mockAnswer()` | `POST /chat` | ⬜ TV3 |
+| `history` | `GET /conversations` | ⬜ TV3 |
+| `documents` | `GET /documents` | ⬜ TV2 |
+| `documentChunks` | `GET /documents/:id/chunks` | ⬜ TV2 |
+| `departments` | `GET /departments/full` | ⬜ TV4 |
+| `users` | `GET /users` | ⬜ TV4 |
 | `sampleQuestions` | Giữ nguyên — là hằng số giao diện | — |
-| `history` | `GET /conversations` | TV3 |
-| `documents` | `GET /documents` | TV2 |
-| `documentChunks` | `GET /documents/:id/chunks` | TV2 |
-| `departments` | `GET /departments/full` | TV4 |
-| `users` | `GET /users` | TV4 |
-| `permissions` | Chuyển sang `packages/shared/src/roles.ts` | TV4 |
-| `useAuth` với `DemoRole` | `POST /auth/login` + `GET /auth/me` | TV4 |
-
-### Việc phải làm trước khi nối API thật
-
-**Xóa hẳn phần chọn vai trò ở màn đăng nhập.** Hiện `useAuth.ts` có kiểu `DemoRole` cho phép người dùng tự chọn vai. Khi auth thật vào thì phải bỏ hoàn toàn, **không giữ lại như "chế độ demo"** — để client tự chọn vai là kiểm soát ở tầng giao diện, đúng thứ mà toàn bộ đề tài này phủ định. Vai và đơn vị chỉ đến từ JWT.
-
-**Sửa `apiClient` theo mục 1** để bóc lớp vỏ `data` và giữ được mã lỗi.
-
-**Chuyển `Source`, `KnowledgeDocument`, `ChunkItem` từ `mock-data.ts` sang `packages/shared/src/dto/`** để hai app dùng chung một định nghĩa.
 
 ---
 
-## 10. Điểm còn treo
+## 12. Điểm còn treo
 
 | # | Vấn đề | Đề xuất |
 |---|---|---|
-| 1 | `DELETE /documents/:id` là xóa mềm hay xóa cứng? | Xóa mềm bằng cột `deletedAt` — tài liệu hết hiệu lực vẫn cần tra lại lịch sử hội thoại cũ. Cần thêm cột vào `schema.prisma` |
-| 2 | Phân trang cho `/documents` | Đã đưa `page`/`pageSize` vào contract nhưng frontend chưa có UI phân trang |
-| 3 | Chuyển sang cookie `httpOnly` | Khi có tên miền chung `app.` + `api.`; hiện dùng Bearer trong `localStorage` |
-| 4 | Chuẩn hóa tên endpoint | `HANDOFF.md` ghi `GET /documents/:id/source-url`, tài liệu phân tích thiết kế ghi `signed-url`. **Chốt: `source-url`**, theo frontend |
+| 1 | Chưa có `packages/shared/` | Kiểu `Source`, `UserItem`, ma trận quyền đang được định nghĩa hai lần. Dựng khi bắt đầu module `documents` |
+| 2 | `DELETE /documents/:id` xóa mềm hay cứng | Lược đồ v2 **không có** cột `deletedAt`. Hiện là xóa cứng, và `message_citations` dùng `ON DELETE SET NULL` nên lịch sử hội thoại vẫn hiển thị được trích dẫn — chỉ mất đường mở file |
+| 3 | Phân trang cho `/documents` | Đã có `page`/`pageSize` trong contract nhưng frontend chưa có giao diện phân trang |
+| 4 | Chuyển sang cookie `httpOnly` | Khi có tên miền chung; hiện dùng Bearer trong `localStorage` |
+| 5 | Giới hạn tần suất `/auth/login` | Chưa có. Nên thêm trước khi demo LAN |

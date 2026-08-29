@@ -27,7 +27,11 @@ export type Source = {
   unit: string;
   documentId: string;
   chunkId: string;
-  articleRef: string | null;
+  /// Vị trí trong cấu trúc văn bản: "Chương II > Điều 12 > Khoản 3".
+  /// Khớp cột `chunks.heading_path`. Tên cũ `articleRef` đã bỏ — lược đồ v2 đổi
+  /// cột thành `heading_path` và nội dung nay là đường dẫn đầy đủ, không chỉ số điều.
+  headingPath: string | null;
+  /// Trang để mở PDF đúng chỗ. Lấy từ `chunks.page_from`.
   page: number | null;
   score: number;
 };
@@ -43,13 +47,16 @@ export type SearchResult = {
 export const GLOBAL_UNIT_LABEL = "Toàn trường";
 
 /**
- * Ghép `locator` theo đúng quy tắc ở contract mục 2: `articleRef` + " · Trang "
- * + `page`; thiếu `articleRef` thì chỉ "Trang N"; thiếu cả hai thì "Không rõ
- * vị trí". Truy hồi thật sau này dùng lại hàm này, đừng ghép tay ở chỗ khác.
+ * Ghép `locator` theo đúng quy tắc ở `docs/api-contract.md` mục 3:
+ * `headingPath` + " · Trang " + `page`; thiếu `headingPath` thì chỉ "Trang N";
+ * thiếu cả hai thì "Không rõ vị trí".
+ *
+ * Truy hồi thật sau này dùng lại hàm này — đừng ghép tay ở chỗ khác, nếu không
+ * hai chỗ sẽ hiển thị khác nhau cho cùng một đoạn văn.
  */
-export function buildLocator(articleRef: string | null, page: number | null): string {
-  if (articleRef && page !== null) return `${articleRef} · Trang ${page}`;
-  if (articleRef) return articleRef;
+export function buildLocator(headingPath: string | null, page: number | null): string {
+  if (headingPath && page !== null) return `${headingPath} · Trang ${page}`;
+  if (headingPath) return headingPath;
   if (page !== null) return `Trang ${page}`;
   return "Không rõ vị trí";
 }
@@ -87,7 +94,7 @@ export async function search(
       unit: GLOBAL_UNIT_LABEL,
       documentId: STUB_DOC_GLOBAL_1,
       chunkId: "00000000-0000-4000-8000-00000000000a",
-      articleRef: "Điều 12, Khoản 1",
+      headingPath: "Điều 12, Khoản 1",
       page: 8,
       score: 0.83,
     },
@@ -101,7 +108,7 @@ export async function search(
       unit: GLOBAL_UNIT_LABEL,
       documentId: STUB_DOC_GLOBAL_2,
       chunkId: "00000000-0000-4000-8000-00000000000b",
-      articleRef: "Điều 5, Khoản 2",
+      headingPath: "Điều 5, Khoản 2",
       page: 3,
       score: 0.71,
     },
@@ -116,7 +123,7 @@ export async function search(
       unit: tenDonVi(user),
       documentId: STUB_DOC_DEPARTMENT,
       chunkId: "00000000-0000-4000-8000-00000000000c",
-      articleRef: null,
+      headingPath: null,
       page: 2,
       score: 0.64,
     },
