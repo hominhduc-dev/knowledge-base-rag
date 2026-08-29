@@ -4,8 +4,9 @@
 
 - Agent: Claude Opus 5
 - Ngày: 29/08/2026
-- Nhánh: `main`
-- Commit cuối: `d0f7799` — toàn bộ công việc bên dưới **chưa được commit**
+- Nhánh: `feat/thiet-ke-v2-docker-netlab` (tách khỏi `main` — mục 11 tổng quan chốt
+  không đẩy thẳng vào `main`)
+- Commit: `12c9e7d` — 123 file, 54 file được Git nhận là đổi tên
 - Phạm vi được giao: chuyển repo sang thiết kế v2.0 (`docs/THIET-KE-HE-THONG.md`,
   `docs/TONG-QUAN-DU-AN.md`), luồng A (hạ tầng + dữ liệu) và luồng B (`netlab`) song song
 
@@ -145,9 +146,9 @@ Nếu dùng `string.length` sẽ ra **189**, tức trình duyệt mất 36 byte 
 
 ## Chưa hoàn thành
 
-- [ ] **Sáu tài liệu trong `docs/` vẫn mô tả v1** — `phan-quyen.md`, `erd.md`,
+- [ ] **Năm tài liệu trong `docs/` vẫn mô tả v1** — `phan-quyen.md`, `erd.md`,
       `api-contract.md`, `cau-truc-thu-muc.md`, `phan-tich-thiet-ke-he-thong.md`.
-      Hai tài liệu v2.0 còn nằm ở `~/Downloads`, **chưa chuyển vào `docs/`**.
+      Hai tài liệu v2.0 đã được chuyển vào `docs/`.
 - [ ] `README.md` vẫn ghi Supabase / Vercel / Hostinger.
 - [ ] **Frontend chưa đụng tới**: vẫn dùng mock, `apiClient` chưa bóc lớp vỏ `data`,
       khối `demoUsers` chưa xóa, `PermissionMatrix` và `RoleSelect` vẫn 4 vai.
@@ -168,9 +169,9 @@ Không còn blocker nào khác. Supabase đã bị loại khỏi thiết kế.
 
 ## Việc agent tiếp theo cần làm
 
-1. **Chuyển hai tài liệu v2.0 từ `~/Downloads` vào `docs/`**, rồi viết lại `phan-quyen.md`
-   và `erd.md` cho khớp lược đồ mới. Sửa `api-contract.md`: bổ sung `INTERNAL_ERROR`,
-   ghi nhận đăng nhập bằng mã, đổi shape `/health`.
+1. **Viết lại `docs/phan-quyen.md` và `docs/erd.md`** cho khớp lược đồ mới. Sửa
+   `api-contract.md`: bổ sung `INTERNAL_ERROR`, ghi nhận đăng nhập bằng mã, đổi shape
+   `/health`, đổi tên sự kiện SSE thành `sources → token* → done`.
 2. **Sửa `web/src/lib/api-client.ts`** — thêm lớp `ApiError`, bóc lớp vỏ `data`.
 3. **Nối `LoginForm.tsx` vào `POST /api/auth/login`**, đổi state `email` thành `account`,
    rồi **xóa khối `demoUsers`** trong `web/src/features/auth/useAuth.ts`.
@@ -220,5 +221,5 @@ corepack pnpm --filter @tang-thu/server exec tsx src/netlab/tcp-client.ts --spli
 - **`.env` ở gốc chứa mật khẩu Postgres, `server/.env` chứa `JWT_SECRET`.** Cả hai đã
   được `.gitignore` loại; kiểm lại bằng `git check-ignore -v .env server/.env` trước
   mỗi lần commit.
-- **Toàn bộ thay đổi chưa commit và rất lớn** (83 mục trong `git status`, gồm cả việc
-  đổi tên hai thư mục gốc). Nên commit sớm để `git mv` được ghi nhận là đổi tên.
+- **Nhánh này chưa merge vào `main` và chưa push.** Theo mục 11 tổng quan, cần ít nhất
+  một approve trước khi merge.

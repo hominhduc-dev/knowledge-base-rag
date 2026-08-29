@@ -5,9 +5,13 @@
 **Stack:** pnpm workspace · Next.js (`web/`) · Express (`server/`) · Postgres 16 + pgvector trong Docker
 
 > **Đổi trọng tâm.** Dự án nay là đồ án **môn Lập trình mạng máy tính**, không phải
-> một ứng dụng web thuần. Nguồn sự thật là `THIET-KE-HE-THONG.md` v2.0 và
-> `TONG-QUAN-DU-AN.md` — hai tài liệu này **chưa được chuyển vào `docs/`**, và sáu
-> tài liệu đang nằm trong `docs/` vẫn mô tả thiết kế v1 đã bị thay thế.
+> một ứng dụng web thuần. Nguồn sự thật là `docs/THIET-KE-HE-THONG.md` v2.0 và
+> `docs/TONG-QUAN-DU-AN.md`.
+>
+> **Cảnh báo:** năm tài liệu còn lại trong `docs/` vẫn mô tả thiết kế v1 **đã bị thay
+> thế** — `phan-quyen.md`, `erd.md`, `api-contract.md`, `cau-truc-thu-muc.md` và
+> `phan-tich-thiet-ke-he-thong.md`. Đọc chúng mà tưởng là hiện hành sẽ hiện thực nhầm
+> 4 vai lên một lược đồ chỉ có 2. Chỉ `thuat-ngu.md` là còn dùng được.
 
 ## Tổng quan
 
@@ -21,7 +25,7 @@
 | Docker | `db` chạy được; `api`/`web` **chưa build thử** | 4 dịch vụ + Caddy đã viết |
 | Truy hồi | Bản tạm — 3 kết quả cứng | Chờ khóa Gemini để sinh vector |
 | Frontend | **Chưa đụng tới** | Vẫn mock, vẫn 4 vai |
-| Tài liệu | **Lệch hẳn với code** | 6 file trong `docs/` mô tả v1 |
+| Tài liệu | **Lệch một phần** | v2.0 đã vào `docs/`; 5 file cũ vẫn mô tả v1 |
 | CI/CD | Chưa có `.github/` | Test rò rỉ phạm vi phải là điều kiện chặn merge |
 
 ## Hạ tầng
@@ -88,7 +92,7 @@ Giao diện đã hoàn thiện từ trước và **chưa được đụng tới 
 
 ## Tài liệu
 
-- [ ] **Chuyển `THIET-KE-HE-THONG.md` và `TONG-QUAN-DU-AN.md` từ `~/Downloads` vào `docs/`.**
+- [x] Chuyển `THIET-KE-HE-THONG.md` và `TONG-QUAN-DU-AN.md` vào `docs/`.
 - [ ] Viết lại `docs/phan-quyen.md` — 2 vai, `department_members`.
 - [ ] Viết lại `docs/erd.md` theo lược đồ v2.
 - [ ] Sửa `docs/api-contract.md` — bổ sung `INTERNAL_ERROR`, ghi nhận đăng nhập bằng mã,
@@ -128,7 +132,7 @@ Supabase đã bị loại khỏi thiết kế nên blocker cũ không còn.
 
 ## Thứ tự công việc tiếp theo
 
-1. Chuyển hai tài liệu v2.0 vào `docs/`, viết lại `phan-quyen.md` và `erd.md`.
+1. Viết lại `docs/phan-quyen.md` và `docs/erd.md` cho khớp lược đồ v2.
 2. Sửa `api-client.ts`, nối `LoginForm` vào API thật, xóa `demoUsers`.
 3. Sửa giao diện xuống 2 vai.
 4. `docker compose build` để kiểm hai Dockerfile chưa từng chạy.
