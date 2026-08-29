@@ -159,24 +159,27 @@ export const departments = [
   { name: "Phòng Công tác Sinh viên", kind: "Phòng ban", docs: 9, users: 18, staff: "Vũ Đình Nam" },
 ];
 
+/**
+ * Dữ liệu giả cho màn quản trị, phản chiếu `server/prisma/seed.ts`.
+ *
+ * Chỉ có HAI vai. Giảng viên (Đỗ Anh Khoa) mang vai "Sinh viên" là đúng, không
+ * phải sót: vai quyết định *làm được gì*, mà giảng viên chỉ cần đọc tài liệu của
+ * khoa mình — xem docs/phan-quyen.md mục 1.
+ *
+ * Xóa khối này khi `GET /users` hoạt động.
+ */
 export const users = [
-  { name: "Nguyễn Minh", email: "minh.n@sv.dau.edu.vn", role: "Sinh viên", scope: "Khoa Công nghệ Thông tin" },
-  { name: "Trần Thị Hoà", email: "hoa.tt@dau.edu.vn", role: "Giáo vụ khoa", scope: "Khoa Công nghệ Thông tin" },
-  { name: "Đỗ Anh Khoa", email: "khoa.da@dau.edu.vn", role: "Giảng viên", scope: "Khoa Công nghệ Thông tin" },
-  { name: "Lê Văn Bằng", email: "bang.lv@dau.edu.vn", role: "Giáo vụ khoa", scope: "Khoa Kiến trúc" },
+  { name: "Đỗ Anh Khoa", email: "khoa.da@dau.edu.vn", role: "Sinh viên", scope: "Khoa Công nghệ Thông tin" },
+  { name: "Trần Thị Hoà", email: "hoa.tt@dau.edu.vn", role: "Quản trị viên", scope: "Khoa Công nghệ Thông tin" },
+  { name: "Lê Văn Bằng", email: "bang.lv@dau.edu.vn", role: "Quản trị viên", scope: "Khoa Kiến trúc" },
+  { name: "Phạm Quốc Đạt", email: "dat.pq@dau.edu.vn", role: "Quản trị viên", scope: "Khoa Xây dựng" },
+  { name: "Vũ Đình Nam", email: "nam.vd@dau.edu.vn", role: "Quản trị viên", scope: "Phòng Công tác Sinh viên" },
   { name: "Nguyễn Thu Hà", email: "ha.nt@dau.edu.vn", role: "Quản trị viên", scope: "Toàn trường" },
-  { name: "Phạm Quốc Đạt", email: "dat.pq@dau.edu.vn", role: "Giáo vụ khoa", scope: "Khoa Xây dựng" },
-  { name: "Hoàng Thị Lan", email: "lan.ht@sv.dau.edu.vn", role: "Sinh viên", scope: "Khoa Xây dựng" },
-  { name: "Vũ Đình Nam", email: "nam.vd@dau.edu.vn", role: "Giáo vụ khoa", scope: "Phòng Công tác Sinh viên" },
+  { name: "Hồ Minh Đức", email: "duc_2351220193@dau.edu.vn", role: "Sinh viên", scope: "Khoa Công nghệ Thông tin" },
+  { name: "Võ Minh Hiếu", email: "hieu_2351220221@dau.edu.vn", role: "Sinh viên", scope: "Khoa Kiến trúc" },
 ];
 
-export const permissions = [
-  ["Đặt câu hỏi trong phạm vi đơn vị", "✓", "✓", "✓", "✓"],
-  ["Xem tài liệu toàn trường", "✓", "✓", "✓", "✓"],
-  ["Tải tài liệu của đơn vị lên", "—", "—", "✓", "✓"],
-  ["Xóa tài liệu của đơn vị", "—", "—", "✓", "✓"],
-  ["Xem lịch sử hỏi đáp của đơn vị", "—", "—", "✓", "✓"],
-  ["Tạo, sửa đơn vị", "—", "—", "—", "✓"],
-  ["Gán vai cho người dùng", "—", "—", "—", "✓"],
-  ["Xem nhật ký hệ thống", "—", "—", "—", "✓"],
-];
+// Ma trận quyền đã chuyển sang `features/admin/permissions.ts`.
+//
+// Nó là HẰNG SỐ, không phải dữ liệu giả: mọi thứ trong file này rồi sẽ bị xóa khi
+// endpoint tương ứng xong, còn bảng quyền thì ở lại.

@@ -94,7 +94,10 @@
 - [x] `UserMenu` — nút Đăng xuất giờ **thật sự** xóa phiên (trước là `<Link>` chỉ
       điều hướng, token vẫn nằm nguyên).
 - [x] `ChatBox` — khóa phạm vi theo `roleCode`, chỉ ADMIN đổi được.
-- [ ] `PermissionMatrix.tsx` xuống 2 cột; bỏ `RoleSelect.tsx`.
+- [x] `PermissionMatrix.tsx` xuống 2 cột, đọc từ hằng số `features/admin/permissions.ts`
+      thay vì `mock-data.ts`; đã xóa `RoleSelect.tsx`.
+- [x] `UserTable` bỏ ô chọn vai giả — nút "Đổi vai" vô hiệu hóa kèm ghi chú, vì
+      `PATCH /users/:id` chưa có.
 - [ ] Bỏ mock cho tài liệu, hội thoại, quản trị.
 
 ## Tài liệu
@@ -139,9 +142,9 @@ Supabase đã bị loại khỏi thiết kế nên blocker cũ không còn.
 
 ## Thứ tự công việc tiếp theo
 
-1. Sửa giao diện xuống 2 vai — `PermissionMatrix.tsx`, bỏ `RoleSelect.tsx`.
-2. Sửa `docs/api-contract.md` cho khớp v2.
-3. Dựng `modules/documents/` để màn tài liệu bỏ được mock.
+1. Sửa `docs/api-contract.md` cho khớp v2.
+2. Dựng `modules/documents/` để màn tài liệu bỏ được mock.
+3. Dựng `/users` và `/departments` để màn quản trị bỏ được mock.
 4. `docker compose build` để kiểm hai Dockerfile chưa từng chạy.
 5. Dựng `modules/documents/` — upload → parse → chunk → lưu CSDL.
 6. Viết `retrieval.sql.ts` thật, thay bản tạm.
