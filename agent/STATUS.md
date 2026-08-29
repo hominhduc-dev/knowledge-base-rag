@@ -43,11 +43,12 @@
 - [x] Migration `20260829031547_init` — 404 dòng, đã áp dụng.
 - [x] Năm khối SQL viết tay: `content_tsv` sinh tự động · HNSW · GIN · `lower(email)` ·
       trigger đồng bộ phạm vi.
-- [x] `db:check` — **25/25 đạt**.
+- [x] `db:check` — **27/27 đạt**, có kiểm cả chuẩn L2 của vector.
 - [x] `db:seed` — 5 đơn vị · 6 cán bộ · 57 sinh viên · 7 tài liệu · 13 đoạn văn.
 - [x] Cặp đối chứng đổi sang CNTT (105 tín chỉ) ↔ Kiến trúc (90 tín chỉ).
-- [x] **Sinh vector nhúng cho 13 đoạn mồi** — khóa Gemini đã có, `db:embed` chạy đạt.
-      Chuẩn L2 của cả 13 vector đúng bằng 1.000000.
+- [x] **Sinh vector nhúng cho 13 đoạn mồi** — `db:embed` chạy đạt, chuẩn L2 = 1.000000.
+- [x] Đổi sang **`gemini-embedding-2`**. Bảng hiện giữ CẢ HAI bộ vector (13 của
+      `-001`, 13 của `-2`) — đúng thiết kế đa model, phục vụ so sánh ở Sprint 4.
 - [!] **Trước Sprint 4:** `seed.ts` xóa-rồi-tạo lại `chunks`, mà `eval_gold_chunks.chunk_id`
       có `ON DELETE CASCADE` — chạy lại seed sẽ xóa sạch liên kết câu hỏi vàng, không báo
       gì. Chưa hại vì bộ `golden-30` còn rỗng. Xem `docs/erd.md` mục 5.1.
@@ -74,6 +75,9 @@
 - [ ] `retrieval.sql.ts` — truy vấn lai thật.
 - [x] `rag/embed.ts` — chuẩn hóa L2, cache theo `content_hash`, lô 64, lùi có nhiễu.
 - [ ] `rag/` — còn `retrieve.ts` · `generate.ts` · `prompt.ts`.
+- [!] **Bẫy đa model:** có 2 model trong `chunk_embeddings`. Truy vấn JOIN mà quên
+      `AND e.model = ...` sẽ trả mỗi đoạn HAI lần, không báo lỗi. Dùng hằng số
+      `MODEL_HIEN_TAI` trong `rag/embed.ts`. `db:check` đã cảnh báo việc này.
 - [ ] `eval/` — bộ 30 câu hỏi vàng, 9 thí nghiệm.
 
 ## Module netlab — môn Lập trình mạng
@@ -123,7 +127,7 @@
 
 ```bash
 docker compose up -d db
-corepack pnpm --filter @tang-thu/server run db:check     # 25/25 đạt
+corepack pnpm --filter @tang-thu/server run db:check     # 27/27 đạt
 corepack pnpm --filter @tang-thu/server run db:seed      # đạt
 corepack pnpm --filter @tang-thu/server run test         # 22/22 đạt
 corepack pnpm run typecheck                              # cả hai package, đạt

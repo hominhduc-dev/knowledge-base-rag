@@ -166,6 +166,31 @@ async function main(): Promise<void> {
     return true;
   });
 
+  // --- 6. Vector nhúng ------------------------------------------------------
+  console.log("\n6. Vector nhúng");
+  const theoModel = await prisma.$queryRaw<{ model: string; n: bigint; chuan: number }[]>`
+    SELECT "model", count(*) AS n, MIN(vector_norm("embedding"))::float8 AS chuan
+    FROM "chunk_embeddings" GROUP BY "model" ORDER BY "model"
+  `;
+
+  if (theoModel.length === 0) {
+    console.log("  – chưa có vector nào (chạy `pnpm db:embed`)");
+  } else {
+    for (const m of theoModel) {
+      await kiem(`${m.model}: ${m.n} vector, chuẩn L2 = 1`, async () => Math.abs(m.chuan - 1) < 1e-5);
+    }
+  }
+
+  // Nhiều model trong bảng là ĐÚNG THIẾT KẾ, nhưng nó biến mọi truy vấn quên lọc
+  // `model` thành truy vấn trả mỗi đoạn nhiều lần. Nhắc to, vì lỗi này không báo.
+  if (theoModel.length > 1) {
+    console.log(
+      `      ⚠ Có ${theoModel.length} model trong bảng. Mọi truy vấn JOIN vào\n` +
+        "        chunk_embeddings PHẢI có điều kiện `e.model = ...`, nếu không\n" +
+        "        mỗi đoạn sẽ trả về một lần cho mỗi model.",
+    );
+  }
+
   // --- Tổng kết -------------------------------------------------------------
   const tong = dat + truot;
   console.log(`\n${"─".repeat(56)}`);

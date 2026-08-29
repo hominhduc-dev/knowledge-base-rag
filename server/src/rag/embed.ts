@@ -3,9 +3,12 @@
 //
 // Hai việc đáng nói, cả hai đều đã ĐO trên API thật chứ không phải suy đoán:
 //
-// 1. BẢN CẮT NGẮN KHÔNG ĐƯỢC CHUẨN HÓA SẴN. Model trả 3072 chiều với chuẩn L2
-//    đúng bằng 1.0000, nhưng khi xin `outputDimensionality: 1536` thì chuẩn tụt
-//    xuống ~0.69 (768 chiều còn 0.59). Phải tự chuẩn hóa L2.
+// 1. CHUẨN HÓA L2 TÙY MODEL — nên cứ chuẩn hóa hết.
+//    `gemini-embedding-2` trả bản cắt ngắn ĐÃ chuẩn hóa (1536 chiều, L2 = 1.0000).
+//    `gemini-embedding-001` thì KHÔNG: 1536 chiều cho L2 ≈ 0.694, 768 chiều còn
+//    ≈ 0.585. Chuẩn hóa lại một vector đã chuẩn là phép vô hại, nên hàm này làm
+//    cho mọi model — bỏ bước đó để tiết kiệm vài phép chia là đặt bẫy cho ai đổi
+//    model về sau.
 //
 // 2. CACHE THEO NỘI DUNG, KHÔNG THEO TÀI LIỆU. Quy chế học vụ thường được ban
 //    hành lại với vài điều sửa đổi: bản 2026 trùng phần lớn nội dung với 2025.
@@ -19,6 +22,29 @@ import { logger } from "../lib/logger.js";
 import { upstreamError } from "../lib/errors.js";
 
 const GOC = "https://generativelanguage.googleapis.com/v1beta/models";
+
+/**
+ * Model đang dùng. MỌI truy vấn chạm `chunk_embeddings` PHẢI lọc theo giá trị này.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * VÌ SAO BẮT BUỘC — cái bẫy của thiết kế đa model.
+ *
+ * Bảng `chunk_embeddings` có `UNIQUE(chunk_id, model)`, cố ý cho phép giữ nhiều
+ * vector của cùng một đoạn từ các model khác nhau, để bộ đánh giá so sánh được.
+ * Cái giá: một câu
+ *
+ *     JOIN chunk_embeddings e ON e.chunk_id = c.id
+ *
+ * KHÔNG có điều kiện model sẽ trả MỖI ĐOẠN MỘT LẦN CHO MỖI MODEL. Với hai model
+ * trong bảng, top-10 thật ra chỉ còn 5 đoạn khác nhau, mỗi cái lặp hai lần —
+ * truy hồi mất một nửa dung lượng ngữ cảnh mà không có lỗi nào báo.
+ *
+ * Đúng phải là:
+ *
+ *     JOIN chunk_embeddings e ON e.chunk_id = c.id AND e.model = ${MODEL_HIEN_TAI}
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+export const MODEL_HIEN_TAI = env.GEMINI_EMBEDDING_MODEL;
 
 /**
  * Kiểu tác vụ, mã hóa bất đối xứng giữa câu hỏi và tài liệu.
