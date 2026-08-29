@@ -1,291 +1,374 @@
-# Thiết kế cơ sở dữ liệu — Tàng Thư
+# Sơ đồ quan hệ dữ liệu — Tàng Thư
 
-**Cập nhật 22/08/2026** · PostgreSQL 16 + pgvector (Supabase) · Prisma ORM
+**Bản v2.0 · viết lại 29/08/2026**
 
-Sơ đồ này là nguồn duy nhất cho `apps/backend/prisma/schema.prisma`. Sửa sơ đồ thì sửa schema, và ngược lại.
+Nguồn của lược đồ là `server/prisma/schema.prisma`. Tài liệu này mô tả và giải thích *vì
+sao*; khi hai bên lệch nhau thì file `.prisma` đúng.
+
+Đối chiếu với cơ sở dữ liệu đang chạy bằng `pnpm --filter @tang-thu/server run db:check`
+— **25/25 đạt** tính đến 29/08/2026.
+
+> **Thay đổi so với bản v1.** Bốn vai xuống hai; `users.department_id` thay bằng bảng
+> nhiều–nhiều `department_members`; cột `chunks.embedding` tách thành bảng riêng
+> `chunk_embeddings` có cột `model`; bỏ luồng duyệt tài liệu (`approval_status`,
+> `approved_by`); bỏ hai cột `scope` vì một cột `department_id` cho phép NULL đã đủ;
+> thêm năm bảng cho bộ đánh giá. Tổng: **15 bảng, 5 enum**.
 
 ---
 
-## 1. Sơ đồ thực thể – quan hệ
+## 1. Sơ đồ
 
 ```mermaid
 erDiagram
-    DEPARTMENT ||--o{ USER : "gồm"
-    DEPARTMENT ||--o{ DOCUMENT : "sở hữu"
-    DEPARTMENT ||--o{ CHUNK : "lọc theo"
-    USER ||--o{ DOCUMENT : "tải lên"
-    USER ||--o{ DOCUMENT : "duyệt"
-    USER ||--o{ CONVERSATION : "tạo"
-    DOCUMENT ||--o{ CHUNK : "được cắt thành"
-    DOCUMENT ||--o{ JOB : "sinh ra"
-    DOCUMENT ||--o{ CITATION : "là nguồn của"
-    CONVERSATION ||--o{ MESSAGE : "gồm"
-    MESSAGE ||--o{ CITATION : "kèm theo"
-    CHUNK ||--o{ CITATION : "được trích dẫn"
-    EVAL_RUN ||--o{ EVAL_RESULT : "gồm"
+    users ||--o{ department_members : "thuộc về"
+    departments ||--o{ department_members : "có thành viên"
+    departments ||--o{ departments : "cây đơn vị"
 
-    DEPARTMENT {
-        uuid id PK
-        string code UK "CNTT, KT, PDT"
-        string name
-        enum type "KHOA | PHONG_BAN"
-        datetime created_at
-    }
+    users ||--o{ documents : "tải lên"
+    departments ||--o{ documents : "sở hữu"
+    documents ||--o{ chunks : "được cắt thành"
+    departments ||--o{ chunks : "LẶP để lọc"
+    chunks ||--o{ chunk_embeddings : "có vector"
+    documents ||--o{ ingest_jobs : "hàng đợi xử lý"
 
-    USER {
+    users ||--o{ conversations : "sở hữu"
+    conversations ||--o{ messages : "chứa"
+    messages ||--o{ message_citations : "trích dẫn"
+    chunks ||--o{ message_citations : "nguồn"
+    documents ||--o{ message_citations : "nguồn"
+
+    eval_sets ||--o{ eval_questions : "gồm"
+    eval_sets ||--o{ eval_runs : "được chạy bởi"
+    eval_questions ||--o{ eval_gold_chunks : "đáp án đúng"
+    chunks ||--o{ eval_gold_chunks : "là đáp án của"
+    eval_runs ||--o{ eval_results : "cho ra"
+    eval_questions ||--o{ eval_results : "được chấm trong"
+
+    users {
         uuid id PK
-        string code UK "MSSV với sinh viên, mã cán bộ với các vai khác"
-        string email UK "duy nhất kể cả khi khác hoa thường"
-        string full_name
-        string password_hash "bcrypt"
-        enum role "VIEWER | CONTRIBUTOR | EDITOR | ADMIN"
-        uuid department_id FK "bắt buộc, tài khoản do ADMIN cấp"
+        varchar_255 email UK "chuẩn hóa chữ thường"
+        varchar_20 code UK "MSSV hoặc mã cán bộ, nullable"
+        varchar_255 password_hash "bcrypt"
+        varchar_200 full_name
         boolean is_active "false thì chặn đăng nhập"
-        datetime created_at
-        datetime updated_at
+        timestamptz last_login_at
     }
 
-    DOCUMENT {
+    departments {
         uuid id PK
-        string title
-        string doc_number "số hiệu văn bản, ví dụ 1234/QD-DHKT"
-        date issued_date
-        enum scope "GLOBAL | DEPARTMENT"
-        uuid department_id FK "NULL khi scope = GLOBAL"
-        string storage_path "đường dẫn trong bucket private"
-        string mime_type "application/pdf hoặc docx"
-        int file_size
-        int page_count
-        string content_hash UK "SHA-256, chặn upload trùng"
-        enum processing_status "PENDING | PROCESSING | READY | FAILED"
-        enum approval_status "PROPOSED | APPROVED | REJECTED"
-        uuid uploaded_by FK
-        uuid approved_by FK "NULL khi chưa duyệt"
-        datetime created_at
-        datetime updated_at
+        varchar_20 code UK "CNTT, KTR, PDT"
+        varchar_200 name
+        dept_type type "FACULTY | OFFICE"
+        uuid parent_id FK "cây đơn vị, nullable"
     }
 
-    CHUNK {
-        uuid id PK
-        uuid document_id FK
-        uuid department_id FK "LẶP có chủ đích, xem mục 3"
-        enum scope "LẶP có chủ đích"
-        int chunk_index
-        text content
-        int token_count
-        int page "để trích dẫn mở đúng trang"
-        string article_ref "Điều 5, Khoản 2"
-        string content_hash "khóa tra cache embedding"
-        vector embedding "1536 chiều, chuẩn hóa L2"
-        tsvector tsv "cột sinh tự động từ content"
-        datetime created_at
-    }
-
-    EMBEDDING_CACHE {
-        string content_hash PK
-        string model "gemini-embedding-001"
-        int dim "1536"
-        vector embedding
-        datetime created_at
-    }
-
-    JOB {
-        uuid id PK
-        enum type "PARSE | CHUNK | EMBED"
-        uuid document_id FK
-        enum status "QUEUED | RUNNING | DONE | FAILED"
-        int attempts "tối đa 3"
-        text last_error
-        datetime scheduled_at
-        datetime started_at
-        datetime finished_at
-    }
-
-    CONVERSATION {
+    department_members {
         uuid id PK
         uuid user_id FK
-        string title "sinh từ câu hỏi đầu tiên"
-        datetime created_at
-        datetime updated_at
+        uuid department_id FK
+        member_role role "STUDENT | ADMIN"
     }
 
-    MESSAGE {
+    documents {
+        uuid id PK
+        varchar_500 title
+        uuid department_id FK "NULL = toàn trường"
+        smallint visibility "dự phòng, hiện luôn 1"
+        varchar_10 source_type "PDF | DOCX"
+        varchar_500 file_path
+        char_64 file_hash UK "SHA-256, chặn upload trùng"
+        int page_count
+        doc_status status "PENDING|PROCESSING|READY|FAILED"
+        text error_message
+        uuid uploaded_by FK
+    }
+
+    chunks {
+        uuid id PK
+        uuid document_id FK
+        int chunk_index
+        text content
+        char_64 content_hash "khóa tra vector đã có"
+        text heading_path "Chương II > Điều 12 > Khoản 3"
+        int page_from
+        int page_to
+        int token_count
+        uuid department_id FK "LẶP có chủ đích"
+        smallint visibility "LẶP có chủ đích"
+        tsvector content_tsv "GENERATED ALWAYS"
+    }
+
+    chunk_embeddings {
+        bigint id PK
+        uuid chunk_id FK
+        vector_1536 embedding
+        varchar_64 model "gemini-embedding-001"
+    }
+
+    ingest_jobs {
+        uuid id PK
+        uuid document_id FK
+        job_status status "PENDING|PROCESSING|DONE|FAILED"
+        int retry_count "dừng sau 3 lần"
+        text last_error
+        timestamptz started_at
+        timestamptz finished_at
+    }
+
+    conversations {
+        uuid id PK
+        uuid user_id FK
+        varchar_300 title "sinh từ câu hỏi đầu tiên"
+    }
+
+    messages {
         uuid id PK
         uuid conversation_id FK
-        enum role "USER | ASSISTANT"
+        message_role role "USER | ASSISTANT"
         text content
-        int latency_ms "đo thời gian trả lời"
-        datetime created_at
+        int latency_ms "đo yêu cầu phi chức năng"
     }
 
-    CITATION {
+    message_citations {
         uuid id PK
         uuid message_id FK
-        uuid chunk_id FK
-        uuid document_id FK "lặp để truy vấn nhanh"
-        int page
-        text quote "đoạn trích hiển thị trên giao diện"
-        int rank "thứ hạng trong kết quả truy hồi"
+        uuid chunk_id FK "nullable, SET NULL"
+        uuid document_id FK "nullable, SET NULL"
+        int rank "khớp marker [n]"
         float score
+        text quote "BẢN SAO, không đọc qua chunk"
+        text heading_path "BẢN SAO"
+        int page "BẢN SAO"
     }
 
-    EVAL_RUN {
+    eval_sets {
         uuid id PK
-        string name "chunk-800-overlap-100"
-        string chunk_strategy "FIXED | STRUCTURED"
-        int chunk_size
-        int chunk_overlap
-        int top_k
-        int embedding_dim
+        varchar_200 name UK "golden-30"
+        text description
+    }
+
+    eval_questions {
+        uuid id PK
+        uuid eval_set_id FK
+        varchar_50 code
+        text question
+        uuid asker_department_id "đơn vị người hỏi giả định"
+        text note
+    }
+
+    eval_gold_chunks {
+        uuid id PK
+        uuid question_id FK
+        uuid chunk_id FK
+    }
+
+    eval_runs {
+        uuid id PK
+        uuid eval_set_id FK
+        varchar_200 name "structured-800-alpha-0.6-k10"
+        jsonb config "đổi tham số không cần migration"
         float recall_at_5
         float recall_at_10
         float mrr
-        text note
-        datetime created_at
+        float faithfulness
+        int avg_latency_ms
     }
 
-    EVAL_RESULT {
+    eval_results {
         uuid id PK
         uuid eval_run_id FK
-        string question_code "mã câu hỏi trong golden-questions.yaml"
-        uuid expected_document_id
+        uuid question_id FK
         boolean hit
         int rank_of_first_hit "NULL nếu trượt"
+        int latency_ms
+        int vector_hits
+        int keyword_hits
     }
 ```
 
 ---
 
-## 2. Vai trò từng bảng
+## 2. Bốn quyết định về mô hình dữ liệu
 
-| Bảng | Vai trò | Ai sở hữu |
+### 2.1 Lặp `department_id` và `visibility` xuống `chunks`
+
+**Đây là quyết định quan trọng nhất của toàn bộ lược đồ.** Vi phạm chuẩn hóa 3NF một
+cách có ý thức.
+
+Ba phương án đã cân nhắc:
+
+| | Cách làm | Kết quả |
 |---|---|---|
-| `departments` | Đơn vị: khoa hoặc phòng ban. Gốc của mọi phép lọc phạm vi | TV4 |
-| `users` | Tài khoản do ADMIN cấp. Một người thuộc đúng một đơn vị, giữ đúng một vai. Đăng nhập bằng `code` hoặc `email` | TV4 |
-| `documents` | Siêu dữ liệu văn bản. File thật nằm trên Supabase Storage, bảng này chỉ giữ đường dẫn | TV2 |
-| `chunks` | Đoạn văn đã cắt, kèm vector và chỉ mục toàn văn. **Bảng trung tâm của truy hồi** | Đức |
-| `embedding_cache` | Tra theo `content_hash` để không nhúng lại nội dung đã nhúng | Đức |
-| `jobs` | Hàng đợi xử lý tài liệu, thay cho Redis | TV2 |
-| `conversations` · `messages` | Lịch sử hội thoại | TV3 |
-| `citations` | Nối câu trả lời về đúng đoạn văn nguồn | TV3 |
-| `eval_runs` · `eval_results` | Số liệu so sánh các cấu hình cắt đoạn | Đức |
+| A | Lấy top-k toàn cục rồi lọc ở tầng ứng dụng | **Hỏng.** Nếu một khoa lớn chiếm phần lớn tài liệu, top-k toàn cục có thể không chứa đoạn nào thuộc khoa của người hỏi → câu trả lời rỗng dù dữ liệu tồn tại. Lỗi im lặng |
+| B | JOIN sang `documents` để lọc, giữ chuẩn hóa | **Kém.** Bộ lập kế hoạch phải chọn giữa quét HNSW rồi lọc, hoặc lọc rồi quét tuần tự. Với bộ lọc chọn lọc cao nó thường chọn sai, độ trễ dao động mạnh theo phân bố dữ liệu |
+| C | **Lặp cột lọc xuống `chunks`** ← đã chọn | Bộ lọc nằm cùng bảng với dữ liệu được xếp hạng, cho phép Postgres **lọc trước rồi mới xếp hạng** trên tập nhỏ. Độ trễ ổn định |
+
+**Cái giá:** hai cột này có thể lệch với bảng cha. Lệch nghĩa là một tài liệu chuyển khoa
+nhưng các đoạn văn của nó vẫn mang khoa cũ — tức sinh viên khoa cũ **vẫn đọc được** nội
+dung đã chuyển đi. Rò rỉ, im lặng, không báo lỗi.
+
+Cái giá đó được trả bằng **trigger trong CSDL**, không phải bằng việc trông chờ lập trình
+viên nhớ cập nhật cả hai nơi:
+
+```sql
+CREATE TRIGGER documents_sync_chunk_scope
+  AFTER UPDATE ON documents
+  FOR EACH ROW EXECUTE FUNCTION sync_chunk_scope();
+```
+
+Hàm chỉ chạy `UPDATE chunks` khi `department_id` hoặc `visibility` thật sự đổi, nên thao
+tác cập nhật tài liệu thông thường không tốn gì.
+
+### 2.2 Tách `chunk_embeddings` khỏi `chunks`
+
+Cho phép giữ **nhiều vector của cùng một đoạn**, từ các model khác nhau. Khi bộ đánh giá
+cần so hai model, ta **thêm hàng** thay vì xóa và nạp lại toàn bộ. Ràng buộc
+`UNIQUE(chunk_id, model)` bảo đảm mỗi cặp chỉ có một vector.
+
+Cái giá là một phép JOIN trong truy vấn nóng — theo khóa chính nên rẻ.
+
+> **Giới hạn cần biết.** Cột `embedding` có kiểu `vector(1536)` **cố định**. Hai model chỉ
+> dùng chung bảng này được khi **cùng số chiều**; model khác chiều đòi migration đổi kiểu
+> cột. Mục 11 của `THIET-KE-HE-THONG.md` nói "nạp song song vector của model mới rồi
+> chuyển đổi không downtime" — câu đó chỉ đúng trong giới hạn này.
+
+### 2.3 Vector 1536 chiều
+
+Tài liệu thiết kế ghi 768; hiện thực dùng **1536**. Lý do và chi phí:
+
+| | 768 | 1536 |
+|---|---|---|
+| Trần chỉ mục HNSW của pgvector | 2000 | 2000 — vẫn lọt |
+| Vector cho 50.000 đoạn | ~150 MB | ~300 MB |
+| Chỉ mục HNSW | ~250 MB | ~500 MB |
+| Thời gian tính khoảng cách | 1× | ~2× (≈20 ms → ≈40 ms) |
+| Chất lượng truy hồi | thấp hơn | **cao hơn** |
+
+Ngân sách phi chức năng cho bước SQL là p95 < 300 ms, nên 40 ms còn thừa chỗ. Tổng CSDL
+vẫn dưới 2 GB, chỉ là biên hẹp lại. **Cần sửa mục 3.2 và 9.1 tài liệu thiết kế cho khớp.**
+
+Hai hệ quả bắt buộc:
+
+- **Phải tự chuẩn hóa L2 trong `rag/embed.ts`.** Model trả 3072 chiều đã chuẩn hóa sẵn;
+  bản cắt ngắn (cả 1536 lẫn 768) thì **không**.
+- **`maintenance_work_mem` phải ≥ 512 MB.** Mặc định 64 MB làm việc dựng chỉ mục HNSW
+  500 MB tràn ra đĩa và chậm hàng chục lần. Đã đặt trong `docker-compose.yml`.
+
+Cơ hội kèm theo: vì model dùng Matryoshka, gọi API **một lần** lấy 3072 chiều rồi cắt và
+chuẩn hóa lại tại chỗ là có đủ cả 1536 lẫn 768 — **thí nghiệm so số chiều tốn 0 lệnh gọi
+API**, thêm được một thí nghiệm vào bảng đánh giá mà không tốn tiền.
+
+### 2.4 `message_citations` giữ bản sao
+
+`quote`, `heading_path` và `page` được **sao chép** sang đây thay vì đọc qua `chunks`.
+Nhờ vậy khi tài liệu bị gỡ, lịch sử hội thoại cũ **vẫn hiển thị được trích dẫn** — chỉ
+mất đường dẫn mở file. Đó là lý do `chunk_id` và `document_id` cho phép NULL với hành vi
+`ON DELETE SET NULL`.
 
 ---
 
-## 3. Ba quyết định thiết kế cần bảo vệ được
+## 3. Chỉ mục
 
-### a) Lặp `department_id` và `scope` xuống bảng `chunks`
-
-Đây là **vi phạm chuẩn hóa có chủ đích**. Về lý thuyết, phạm vi của một đoạn văn suy được từ `documents` qua `document_id`, nên hai cột này là dư thừa.
-
-Lý do vẫn lặp: chỉ mục HNSW không kết hợp tốt với phép JOIN lọc quyền. Nếu viết `JOIN documents ... WHERE d.department_id = ?`, Postgres phải lấy top-k theo vector *rồi* mới lọc — kết quả có thể rỗng hoặc thiếu vì k đoạn gần nhất đều thuộc khoa khác. Đặt cột lọc ngay trên `chunks` cho phép lọc **trước** khi xếp hạng.
-
-Cái giá phải trả: khi tài liệu đổi đơn vị hoặc đổi phạm vi, phải cập nhật đồng bộ xuống tất cả `chunks` của nó. Xử lý bằng một transaction trong `ingest.service.ts`.
-
-### b) `embedding` 1536 chiều, không phải 3072
-
-`gemini-embedding-001` mặc định trả vector 3072 chiều, nhưng **chỉ mục HNSW của pgvector chỉ hỗ trợ tối đa 2000 chiều**. Nên hạ xuống 1536 qua tham số `output_dimensionality`.
-
-Lưu ý bắt buộc: khi hạ chiều, vector trả về **không còn được chuẩn hóa L2 sẵn** như bản 3072. Phải tự chuẩn hóa trong `embed.ts` trước khi lưu, nếu không toán tử `<=>` cho khoảng cách sai.
-
-### c) `tsv` là cột sinh tự động, dùng cấu hình `simple`
+Bốn chỉ mục dưới đây **Prisma không sinh được**, phải viết tay trong migration:
 
 ```sql
-ALTER TABLE chunks ADD COLUMN tsv tsvector
-  GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED;
+-- Tìm kiếm vector. m=16, ef_construction=64 cho recall ~0,95 so với quét vét cạn.
+CREATE INDEX chunk_embeddings_embedding_hnsw ON chunk_embeddings
+  USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
+
+-- Nhánh từ khóa của tìm kiếm lai.
+CREATE INDEX chunks_content_tsv_gin ON chunks USING gin (content_tsv);
+
+-- Chặn hai tài khoản chỉ khác nhau hoa/thường ở email.
+CREATE UNIQUE INDEX users_email_lower_key ON users (lower(email));
+
+-- Cột sinh tự động; Postgres tự cập nhật nên không thể quên đồng bộ.
+content_tsv tsvector GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED
 ```
 
-Dùng `'simple'` chứ không phải `'english'`: PostgreSQL không có từ điển tiếng Việt, mà `'english'` sẽ cắt gốc từ sai và loại nhầm từ dừng. `'simple'` chỉ tách từ và hạ chữ thường — đúng thứ cần để bắt số hiệu văn bản và tên riêng, vốn là phần mà embedding hay trượt.
+Cùng với trigger ở mục 2.1, đó là **năm khối SQL viết tay**.
 
-Cột `GENERATED ALWAYS ... STORED` giúp không bao giờ quên cập nhật `tsv` khi sửa `content`.
+### Chỉ mục do Prisma sinh
 
-**Cảnh báo khi viết truy vấn: `plainto_tsquery` nối các từ bằng AND.** Đã kiểm chứng trên dữ liệu mồi ngày 22/08/2026: câu hỏi *"điều kiện nhận đồ án tốt nghiệp bao nhiêu tín chỉ"* trả về **rỗng**, vì văn bản gốc không chứa hai từ "điều kiện" và "bao nhiêu" — chỉ cần một từ trong câu hỏi vắng mặt là toàn bộ truy vấn trượt.
-
-Nhánh từ khóa của tìm kiếm lai phải dùng OR, không dùng AND:
-
-```sql
-replace(plainto_tsquery('simple', $1)::text, '&', '|')::tsquery
-```
-
-Cách này giữ nguyên phần tách từ và thoát ký tự đặc biệt của `plainto_tsquery`, chỉ đổi toán tử. Việc lọc bớt kết quả kém liên quan là nhiệm vụ của bước xếp hạng `ts_rank` và của hợp nhất RRF, không phải của mệnh đề khớp.
+| Bảng | Chỉ mục | Phục vụ |
+|---|---|---|
+| `chunks` | `(department_id, visibility)` | **Quan trọng nhất của đồ án** — lọc phạm vi trước khi xếp hạng |
+| `chunks` | `(content_hash)` | Tra vector đã có, khỏi gọi lại API |
+| `chunks` | `(document_id, chunk_index)` UNIQUE | Thứ tự đoạn trong tài liệu |
+| `documents` | `(department_id, visibility, status)` | Liệt kê tài liệu trong phạm vi |
+| `documents` | `(file_hash)` UNIQUE | Chặn upload trùng ở tầng tài liệu |
+| `department_members` | `(user_id, department_id)` UNIQUE | Một người một tư cách mỗi đơn vị |
+| `ingest_jobs` | `(status, created_at)` | Worker lấy việc theo thứ tự |
+| `conversations` | `(user_id, updated_at DESC)` | Danh sách hội thoại gần đây |
+| `messages` | `(conversation_id, created_at)` | Đọc lại một hội thoại |
+| `message_citations` | `(message_id, rank)` | Dựng panel nguồn theo thứ tự `[n]` |
 
 ---
 
-## 4. Chỉ mục
+## 4. Hành vi khi xóa
 
-```sql
--- truy hồi vector
-CREATE INDEX chunks_embedding_hnsw ON chunks
-  USING hnsw (embedding vector_cosine_ops);
-
--- truy hồi toàn văn
-CREATE INDEX chunks_tsv_gin ON chunks USING gin (tsv);
-
--- lọc phạm vi — chỉ mục quan trọng nhất của đồ án
-CREATE INDEX chunks_scope_dept ON chunks (scope, department_id);
-
-CREATE INDEX chunks_document ON chunks (document_id);
-CREATE INDEX documents_dept_scope ON documents (department_id, scope, approval_status);
-CREATE INDEX jobs_status_sched ON jobs (status, scheduled_at);
-CREATE INDEX messages_conversation ON messages (conversation_id, created_at);
-```
-
-Tạo `chunks_embedding_hnsw` **sau khi** nạp xong dữ liệu — dựng chỉ mục HNSW trên bảng rỗng rồi chèn dần chậm hơn nhiều.
+| Khóa ngoại | Hành vi | Vì sao |
+|---|---|---|
+| `department_members` → `users`, `departments` | `CASCADE` | Tư cách thành viên không có nghĩa khi thiếu một trong hai đầu |
+| `chunks` → `documents` | `CASCADE` | Đoạn văn không sống ngoài tài liệu |
+| `chunk_embeddings` → `chunks` | `CASCADE` | Vector không sống ngoài đoạn văn |
+| `ingest_jobs` → `documents` | `CASCADE` | Job xử lý một tài liệu đã mất thì vô nghĩa |
+| `conversations` → `users` | `CASCADE` | Hội thoại thuộc về người hỏi |
+| `messages` → `conversations` | `CASCADE` | |
+| `message_citations` → `messages` | `CASCADE` | |
+| `message_citations` → `chunks`, `documents` | **`SET NULL`** | Giữ được lịch sử hội thoại khi tài liệu bị gỡ — xem mục 2.4 |
+| `documents` → `departments`, `users` | `RESTRICT` | Không cho xóa đơn vị hay người dùng còn tài liệu treo |
+| `chunks` → `departments` | `RESTRICT` | |
+| `departments` → `departments` | `RESTRICT` | Không cho xóa đơn vị cha còn con |
+| `eval_runs` → `eval_sets` | `RESTRICT` | Kết quả đo phải giữ được bộ câu hỏi đã dùng |
 
 ---
 
-## 5. Ràng buộc toàn vẹn
+## 5. Cảnh báo vận hành
 
-| Ràng buộc | Diễn giải |
-|---|---|
-| `documents.content_hash` UNIQUE | Cùng một file upload hai lần thì báo trùng, không nhúng lại |
-| `chunks (document_id, chunk_index)` UNIQUE | Không có hai đoạn cùng thứ tự trong một tài liệu |
-| `scope = 'GLOBAL'` ⟹ `department_id IS NULL` | CHECK constraint trên cả `documents` và `chunks` |
-| `scope = 'DEPARTMENT'` ⟹ `department_id IS NOT NULL` | CHECK constraint |
-| `chunks.department_id` = `documents.department_id` | Bảo đảm bằng transaction khi ghi, kiểm lại trong test |
-| Xóa `documents` ⟹ xóa `chunks`, `jobs` | `ON DELETE CASCADE` |
-| Xóa `users` | Chặn — dùng `is_active = false` thay vì xóa, tránh gãy khóa ngoại từ `documents.uploaded_by` |
-| Chỉ tài liệu `approval_status = 'APPROVED'` mới vào truy hồi | Điều kiện trong `retrieval.sql.ts` |
+### 5.1 Chạy lại seed sẽ **xóa sạch** liên kết câu hỏi vàng
 
----
+`seed.ts` xóa rồi tạo lại toàn bộ `chunks` của mỗi tài liệu. Vì `eval_gold_chunks.chunk_id`
+có `ON DELETE CASCADE`, **mọi liên kết câu hỏi vàng ↔ đoạn văn bị xóa theo, không báo gì**.
 
-## 5b. Cảnh báo về migration tiếp theo
+Chưa gây hại lúc này vì bộ `golden-30` còn rỗng. Nhưng từ Sprint 4, khi đã gán 30 câu hỏi
+với đáp án, một lần `pnpm db:seed` vô ý là mất trắng công gán tay. Trước Sprint 4 cần chọn
+một trong hai: cho `seed.ts` upsert theo `(document_id, chunk_index)` thay vì xóa-rồi-tạo,
+hoặc tách script gán câu hỏi vàng ra chạy lại được độc lập.
 
-**Không dùng `prisma migrate diff` để sinh migration sau lần đầu.** Đã kiểm chứng ngày 22/08/2026: khi thêm cột `users.code`, lệnh diff sinh ra SQL kèm ba câu
+### 5.2 `prisma migrate` không biết năm khối SQL viết tay
 
-```sql
-DROP INDEX "public"."chunks_embedding_hnsw";
-DROP INDEX "public"."chunks_tsv_gin";
-DROP INDEX "public"."embedding_cache_embedding_hnsw";
-ALTER TABLE "chunks" ALTER COLUMN "tsv" DROP DEFAULT;
-```
+`prisma migrate dev` **an toàn với Postgres local** — cảnh báo "phải viết tay" của bản v1
+chỉ áp dụng cho Supabase. Nhưng năm khối ở mục 3 vẫn nằm ngoài tầm hiểu của Prisma, nên
+một lần `migrate dev` sau này có thể lặng lẽ bỏ chúng đi.
 
-Lý do: ba chỉ mục đó và cột sinh tự động được tạo bằng SQL viết tay, Prisma không biết chúng tồn tại nên coi là thừa và xóa đi. Áp dụng bản sinh tự động là **mất chỉ mục vector mà không có thông báo lỗi nào** — truy vấn vẫn chạy, chỉ chậm dần khi dữ liệu lớn lên, và rất khó truy ra nguyên nhân.
+**Mất chỉ mục HNSW không gây lỗi nào**: truy vấn vẫn trả kết quả đúng, chỉ chậm dần theo
+lượng dữ liệu. Đó là kiểu hỏng tệ nhất. Vì vậy: **chạy `pnpm db:check` sau MỌI lần migrate.**
 
-Quy trình đúng cho mọi migration từ lần thứ hai: **chạy `migrate diff` chỉ để XEM**, rồi tự viết file migration chứa đúng phần cần đổi, cuối cùng `migrate deploy`.
+### 5.3 `eval_questions.asker_department_id` không có khóa ngoại
 
-## 6. Ghi chú khi hiện thực bằng Prisma
+Cột này lưu đơn vị của người hỏi giả định, dùng để kiểm chứng cùng câu hỏi ở hai khoa cho
+ra hai kết quả. Hiện nó là `uuid` trần, **không ràng buộc** tới `departments.id` — xóa một
+đơn vị sẽ để lại tham chiếu treo. Nên thêm khóa ngoại khi dựng module `eval`.
 
-Prisma chưa hỗ trợ kiểu `vector` và `tsvector`, nên khai báo bằng `Unsupported`:
+### 5.4 Nhánh từ khóa phải dùng OR
 
-```prisma
-model Chunk {
-  id        String  @id @default(uuid())
-  content   String
-  embedding Unsupported("vector(1536)")?
-  tsv       Unsupported("tsvector")?
-  // ...
-}
-```
-
-Ba hệ quả:
-
-1. Không đọc/ghi hai cột này qua Prisma Client — dùng `$queryRaw` và `$executeRaw`.
-2. Ba lệnh ở mục 3c và toàn bộ chỉ mục ở mục 4 phải viết tay vào file migration SQL, `prisma migrate` không tự sinh.
-3. Trước tất cả: bật extension trong migration đầu tiên.
+`plainto_tsquery` nối **mọi** từ bằng `AND`, nên với câu hỏi tự nhiên nó gần như luôn trả
+rỗng. Đã kiểm chứng. Phải viết:
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS vector;
+replace(plainto_tsquery('simple', $q)::text, '&', '|')::tsquery
 ```
 
-Trên Supabase, extension `vector` bật sẵn ở schema `extensions` — kiểm tra lại bằng `SELECT * FROM pg_extension;` trước khi chạy migration đầu tiên.
+Mẫu đang dùng trong `scope-isolation.test.ts`; sao chép nguyên vào `retrieval.sql.ts`.
+
+### 5.5 Cấu hình `'simple'` không chuẩn hóa dấu
+
+Dùng `'simple'` thay vì `'english'` vì bộ stemmer tiếng Anh làm hỏng từ tiếng Việt.
+Hạn chế đã biết và chấp nhận: `'simple'` chỉ tách token và hạ chữ thường, nên **"học phí"
+và "hoc phi" không khớp nhau**. Ghi nhận là giới hạn, không xử lý trong 8 tuần.
+
+### 5.6 Ghim `prisma` ở 6.16.x
+
+CLI sẽ mời nâng lên 8.x — đừng nâng. Các bản mới báo schema drift sai trên cột
+`Unsupported("vector")`: https://github.com/prisma/prisma/issues/28867

@@ -8,10 +8,9 @@
 > một ứng dụng web thuần. Nguồn sự thật là `docs/THIET-KE-HE-THONG.md` v2.0 và
 > `docs/TONG-QUAN-DU-AN.md`.
 >
-> **Cảnh báo:** năm tài liệu còn lại trong `docs/` vẫn mô tả thiết kế v1 **đã bị thay
-> thế** — `phan-quyen.md`, `erd.md`, `api-contract.md`, `cau-truc-thu-muc.md` và
-> `phan-tich-thiet-ke-he-thong.md`. Đọc chúng mà tưởng là hiện hành sẽ hiện thực nhầm
-> 4 vai lên một lược đồ chỉ có 2. Chỉ `thuat-ngu.md` là còn dùng được.
+> **Cảnh báo:** ba tài liệu còn lại trong `docs/` vẫn mô tả thiết kế v1 **đã bị thay
+> thế** — `api-contract.md`, `cau-truc-thu-muc.md` và `phan-tich-thiet-ke-he-thong.md`.
+> `phan-quyen.md` và `erd.md` đã viết lại theo v2 và đã đối chiếu với CSDL đang chạy.
 
 ## Tổng quan
 
@@ -25,7 +24,7 @@
 | Docker | `db` chạy được; `api`/`web` **chưa build thử** | 4 dịch vụ + Caddy đã viết |
 | Truy hồi | Bản tạm — 3 kết quả cứng | Chờ khóa Gemini để sinh vector |
 | Frontend | **Chưa đụng tới** | Vẫn mock, vẫn 4 vai |
-| Tài liệu | **Lệch một phần** | v2.0 đã vào `docs/`; 5 file cũ vẫn mô tả v1 |
+| Tài liệu | **Lệch một phần** | v2.0 + `phan-quyen` + `erd` đã khớp; 3 file cũ chưa |
 | CI/CD | Chưa có `.github/` | Test rò rỉ phạm vi phải là điều kiện chặn merge |
 
 ## Hạ tầng
@@ -48,6 +47,9 @@
 - [x] `db:seed` — 5 đơn vị · 6 cán bộ · 57 sinh viên · 7 tài liệu · 13 đoạn văn.
 - [x] Cặp đối chứng đổi sang CNTT (105 tín chỉ) ↔ Kiến trúc (90 tín chỉ).
 - [ ] Sinh vector nhúng cho 13 đoạn văn — **cần `GEMINI_API_KEY`**.
+- [!] **Trước Sprint 4:** `seed.ts` xóa-rồi-tạo lại `chunks`, mà `eval_gold_chunks.chunk_id`
+      có `ON DELETE CASCADE` — chạy lại seed sẽ xóa sạch liên kết câu hỏi vàng, không báo
+      gì. Chưa hại vì bộ `golden-30` còn rỗng. Xem `docs/erd.md` mục 5.1.
 
 ## Backend
 
@@ -93,8 +95,8 @@ Giao diện đã hoàn thiện từ trước và **chưa được đụng tới 
 ## Tài liệu
 
 - [x] Chuyển `THIET-KE-HE-THONG.md` và `TONG-QUAN-DU-AN.md` vào `docs/`.
-- [ ] Viết lại `docs/phan-quyen.md` — 2 vai, `department_members`.
-- [ ] Viết lại `docs/erd.md` theo lược đồ v2.
+- [x] Viết lại `docs/phan-quyen.md` — 2 vai, `department_members`, 6 test cách ly.
+- [x] Viết lại `docs/erd.md` — 15 bảng, đã đối chiếu với CSDL đang chạy.
 - [ ] Sửa `docs/api-contract.md` — bổ sung `INTERNAL_ERROR`, ghi nhận đăng nhập bằng mã,
       đổi shape `/health`, đổi tên sự kiện SSE thành `sources → token* → done`.
 - [ ] Viết lại `docs/cau-truc-thu-muc.md` cho `server/` + `web/` + `netlab/`.
@@ -132,9 +134,9 @@ Supabase đã bị loại khỏi thiết kế nên blocker cũ không còn.
 
 ## Thứ tự công việc tiếp theo
 
-1. Viết lại `docs/phan-quyen.md` và `docs/erd.md` cho khớp lược đồ v2.
-2. Sửa `api-client.ts`, nối `LoginForm` vào API thật, xóa `demoUsers`.
-3. Sửa giao diện xuống 2 vai.
+1. Sửa `api-client.ts`, nối `LoginForm` vào API thật, xóa `demoUsers`.
+2. Sửa giao diện xuống 2 vai.
+3. Sửa `docs/api-contract.md` cho khớp v2.
 4. `docker compose build` để kiểm hai Dockerfile chưa từng chạy.
 5. Dựng `modules/documents/` — upload → parse → chunk → lưu CSDL.
 6. Viết `retrieval.sql.ts` thật, thay bản tạm.
