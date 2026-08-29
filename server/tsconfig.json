@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+
+    "outDir": "dist",
+    "rootDir": "src",
+    "sourceMap": true,
+    "declaration": false,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  // Chỉ `src` được biên dịch ra dist — prisma/ và scripts/ chạy bằng tsx, đóng
+  // gói chúng vào bản build chỉ làm image to thêm. Chúng vẫn được kiểm kiểu:
+  // xem tsconfig.check.json, đó mới là cái `typecheck` dùng.
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

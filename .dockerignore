@@ -1,0 +1,19 @@
+# Không gửi những thứ này vào build context. Bỏ qua bước này thì mỗi lần build
+# Docker phải nuốt cả trăm nghìn file trong node_modules.
+node_modules
+**/node_modules
+.next
+**/.next
+dist
+**/dist
+.git
+.github
+agent
+docs
+*.md
+!server/prisma/**/*.md
+.env
+**/.env
+*.log
+.vscode
+.idea

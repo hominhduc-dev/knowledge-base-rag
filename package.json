@@ -3,9 +3,11 @@
   "private": true,
   "packageManager": "pnpm@11.19.0",
   "scripts": {
-    "dev": "pnpm --filter @tang-thu/frontend dev",
-    "build": "pnpm --filter @tang-thu/frontend build",
-    "lint": "pnpm --filter @tang-thu/frontend lint",
-    "typecheck": "pnpm --filter @tang-thu/frontend typecheck"
+    "dev": "corepack pnpm --parallel --filter @tang-thu/server --filter @tang-thu/web run dev",
+    "dev:api": "corepack pnpm --filter @tang-thu/server run dev",
+    "dev:web": "corepack pnpm --filter @tang-thu/web run dev",
+    "build": "corepack pnpm --filter @tang-thu/server run build && corepack pnpm --filter @tang-thu/web run build",
+    "lint": "corepack pnpm --filter @tang-thu/web run lint",
+    "typecheck": "corepack pnpm --recursive run typecheck"
   }
 }

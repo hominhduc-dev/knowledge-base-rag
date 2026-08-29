@@ -1,0 +1,439 @@
+// ---------------------------------------------------------------------------
+// Tàng Thư — Hệ thống hỏi đáp tri thức học vụ
+// Nguồn duy nhất của lược đồ CSDL. Sơ đồ tương ứng: docs/erd.md
+//
+// CHỦ SỞ HỮU: Hồ Minh Đức (Tech Lead).
+// Cần thêm bảng hoặc cột thì mở issue, không tự sửa file này — hai cột phạm vi
+// trên bảng `chunks` quyết định toàn bộ cơ chế cách ly giữa các đơn vị.
+//
+// Bốn thứ Prisma KHÔNG sinh được, phải viết tay trong migration:
+//   1. Cột `content_tsv` dạng GENERATED ALWAYS
+//   2. Chỉ mục HNSW trên `chunk_embeddings.embedding` và GIN trên `content_tsv`
+//   3. Chỉ mục duy nhất trên `lower(email)`
+//   4. Trigger đồng bộ `department_id` + `visibility` từ documents xuống chunks
+// Chạy `pnpm db:check` sau mỗi lần migrate để xác nhận cả bốn còn nguyên.
+//
+// GHIM PHIÊN BẢN: prisma và @prisma/client phải ở 6.16.x. Bản 7.1.0 báo schema
+// drift sai trên cột Unsupported("vector"): https://github.com/prisma/prisma/issues/28867
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================================================
+// ENUM
+// ===========================================================================
+
+/// Hai vai, không thêm vai thứ ba.
+///
+/// Vai quyết định LÀM ĐƯỢC GÌ; đơn vị quyết định THẤY ĐƯỢC GÌ. Hai sinh viên
+/// cùng vai STUDENT nhưng khác khoa vẫn nhận hai tập kết quả khác nhau, vì phạm
+/// vi lấy từ `department_members` chứ không từ cột `role`. Tách hai trục này để
+/// thêm vai mới sau này không phải sửa câu truy vấn truy hồi.
+enum MemberRole {
+  STUDENT
+  ADMIN
+
+  @@map("member_role")
+}
+
+enum DeptType {
+  FACULTY // khoa
+  OFFICE // phòng ban
+
+  @@map("dept_type")
+}
+
+enum DocStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+
+  @@map("doc_status")
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+
+  @@map("job_status")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+
+  @@map("message_role")
+}
+
+// ===========================================================================
+// NGƯỜI DÙNG VÀ ĐƠN VỊ
+// ===========================================================================
+
+/// Tài khoản do ADMIN cấp — hệ thống không có chức năng tự đăng ký.
+///
+/// Cho tự đăng ký kèm tự chọn khoa là vô hiệu hóa cách ly phạm vi ngay tại cửa
+/// vào, trong khi bộ kiểm thử vẫn xanh vì nó dùng tài khoản seed.
+model User {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Chuẩn hóa CHỮ THƯỜNG trước khi ghi. Migration thêm chỉ mục duy nhất trên
+  /// lower(email) để chặn hai tài khoản chỉ khác nhau hoa/thường.
+  email String @unique @db.VarChar(255)
+
+  /// Mã số sinh viên hoặc mã cán bộ. Đăng nhập được bằng MỘT TRONG HAI: `code`
+  /// hoặc `email`, phân biệt bằng dấu `@`. Cho phép rỗng vì không phải ai cũng
+  /// được cấp mã; Postgres cho nhiều NULL trong cột UNIQUE.
+  /// Chuẩn hóa CHỮ HOA trước khi ghi.
+  code String? @unique @db.VarChar(20)
+
+  passwordHash String   @map("password_hash") @db.VarChar(255) // bcrypt
+  fullName     String   @map("full_name") @db.VarChar(200)
+  isActive     Boolean  @default(true) @map("is_active") // false thì chặn đăng nhập
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(6)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  memberships       DepartmentMember[]
+  conversations     Conversation[]
+  uploadedDocuments Document[]
+
+  @@map("users")
+}
+
+model Department {
+  id   String   @id @default(uuid()) @db.Uuid
+  code String   @unique @db.VarChar(20) // CNTT, KTRUC, PDT
+  name String   @db.VarChar(200)
+  type DeptType
+
+  /// Cây đơn vị: bộ môn thuộc khoa, khoa thuộc trường. Chưa dùng tới trong 8
+  /// tuần nhưng giữ vì bỏ đi thì mở rộng sau phải migrate, giữ lại tốn 0 đồng.
+  parentId String? @map("parent_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  parent    Department?        @relation("DepartmentTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  Department[]       @relation("DepartmentTree")
+  members   DepartmentMember[]
+  documents Document[]
+  chunks    Chunk[]
+
+  @@map("departments")
+}
+
+/// Quan hệ nhiều–nhiều giữa người và đơn vị. ĐÂY là nơi quyết định phạm vi.
+///
+/// Một giảng viên dạy hai khoa có hai dòng ở bảng này thay vì hai tài khoản.
+/// Vai gắn với TỪNG dòng, nên một người có thể là ADMIN ở phòng ban mình và
+/// STUDENT ở nơi khác — `lib/scope.ts` gộp lại thành quyền hiệu dụng.
+model DepartmentMember {
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @map("user_id") @db.Uuid
+  departmentId String     @map("department_id") @db.Uuid
+  role         MemberRole
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, departmentId])
+  @@index([userId])
+  @@map("department_members")
+}
+
+// ===========================================================================
+// TÀI LIỆU VÀ ĐOẠN VĂN
+// ===========================================================================
+
+model Document {
+  id    String @id @default(uuid()) @db.Uuid
+  title String @db.VarChar(500)
+
+  /// NULL nghĩa là tài liệu TOÀN TRƯỜNG — mọi người đọc được.
+  /// Có giá trị nghĩa là chỉ thành viên đúng đơn vị đó đọc được.
+  departmentId String? @map("department_id") @db.Uuid
+
+  /// Dự phòng mở rộng, hiện chỉ dùng một giá trị. Truy vấn lọc `visibility <= n`.
+  visibility Int @default(1) @db.SmallInt
+
+  sourceType  String    @map("source_type") @db.VarChar(10) // PDF | DOCX
+  filePath    String    @map("file_path") @db.VarChar(500)
+  /// SHA-256 của file. Upload lại đúng file đó thì trả bản ghi cũ, không xử lý lại.
+  fileHash    String    @unique @map("file_hash") @db.Char(64)
+  pageCount   Int?      @map("page_count")
+  status      DocStatus @default(PENDING)
+  errorMessage String?  @map("error_message") @db.Text
+
+  uploadedById String   @map("uploaded_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  uploadedBy User        @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  chunks     Chunk[]
+  jobs       IngestJob[]
+  citations  MessageCitation[]
+
+  @@index([departmentId, visibility, status])
+  @@index([status])
+  @@map("documents")
+}
+
+/// Bảng trung tâm của truy hồi.
+///
+/// `departmentId` và `visibility` được LẶP từ bảng documents. Đây là vi phạm
+/// chuẩn hóa CÓ CHỦ ĐÍCH: chỉ mục HNSW không kết hợp tốt với JOIN lọc quyền, và
+/// lấy top-k rồi mới lọc thì kết quả có thể RỖNG dù dữ liệu tồn tại — lỗi im
+/// lặng, không báo gì. Đặt cột lọc cùng bảng cho phép lọc TRƯỚC khi xếp hạng.
+///
+/// Cái giá: khi tài liệu đổi đơn vị, hai cột này phải đổi theo. Migration cài
+/// một trigger làm việc đó, nên không dựa vào việc lập trình viên nhớ.
+model Chunk {
+  id         String @id @default(uuid()) @db.Uuid
+  documentId String @map("document_id") @db.Uuid
+  chunkIndex Int    @map("chunk_index")
+
+  content     String @db.Text
+  contentHash String @map("content_hash") @db.Char(64) // khóa tra vector đã có
+
+  /// "Chương II > Điều 12 > Khoản 3" — dùng để hiển thị vị trí trong trích dẫn.
+  headingPath String? @map("heading_path") @db.Text
+  pageFrom    Int?    @map("page_from")
+  pageTo      Int?    @map("page_to")
+  tokenCount  Int     @map("token_count")
+
+  // --- LẶP có chủ đích từ documents ---
+  departmentId String? @map("department_id") @db.Uuid
+  visibility   Int     @db.SmallInt
+
+  /// Cột sinh tự động: GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED.
+  /// Prisma không khai báo được, migration viết tay. Postgres tự cập nhật nên
+  /// không thể quên đồng bộ.
+  ///
+  /// Dùng cấu hình 'simple' chứ không phải 'english': bộ stemmer tiếng Anh làm
+  /// hỏng từ tiếng Việt. Hạn chế đã biết: 'simple' không chuẩn hóa dấu, nên
+  /// "học phí" và "hoc phi" không khớp nhau.
+  contentTsv Unsupported("tsvector")? @map("content_tsv")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  document   Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  department Department?       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  embeddings ChunkEmbedding[]
+  citations  MessageCitation[]
+  goldFor    EvalGoldChunk[]
+
+  @@unique([documentId, chunkIndex])
+  @@index([departmentId, visibility]) // chỉ mục quan trọng nhất của đồ án
+  @@index([contentHash])
+  @@map("chunks")
+}
+
+/// Vector tách khỏi `chunks` để giữ được nhiều model cho cùng một đoạn.
+///
+/// Khi bộ đánh giá so hai model, ta THÊM hàng thay vì xóa và nạp lại toàn bộ.
+/// Giá phải trả là một phép JOIN trong truy vấn nóng — theo khóa chính nên rẻ.
+///
+/// LƯU Ý: cột `embedding` có kiểu vector(1536) CỐ ĐỊNH. Hai model chỉ dùng chung
+/// bảng này được khi CÙNG số chiều; model khác chiều đòi migration đổi kiểu cột.
+model ChunkEmbedding {
+  id      BigInt @id @default(autoincrement())
+  chunkId String @map("chunk_id") @db.Uuid
+
+  /// 1536 chiều. Trần của chỉ mục HNSW trong pgvector là 2000 nên vẫn lọt.
+  /// Prisma chưa hỗ trợ kiểu này — mọi thao tác đọc/ghi dùng $queryRaw.
+  embedding Unsupported("vector(1536)")
+
+  model     String   @db.VarChar(64) // gemini-embedding-001
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  chunk Chunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+  @@unique([chunkId, model])
+  @@map("chunk_embeddings")
+}
+
+/// Hàng đợi xử lý tài liệu — thay cho Redis.
+///
+/// Worker lấy việc bằng `SELECT ... FOR UPDATE SKIP LOCKED`. Thông lượng thấp
+/// hơn Redis rõ rệt, nhưng khối lượng thật là vài chục tài liệu mỗi học kỳ, và
+/// đổi lại: bớt một container, bớt một công nghệ cả nhóm phải học, trạng thái
+/// job nằm cùng transaction với dữ liệu nghiệp vụ.
+model IngestJob {
+  id         String    @id @default(uuid()) @db.Uuid
+  documentId String    @map("document_id") @db.Uuid
+  status     JobStatus @default(PENDING)
+  retryCount Int       @default(0) @map("retry_count") // dừng sau 3 lần
+  lastError  String?   @map("last_error") @db.Text
+  startedAt  DateTime? @map("started_at") @db.Timestamptz(6)
+  finishedAt DateTime? @map("finished_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([documentId])
+  @@map("ingest_jobs")
+}
+
+// ===========================================================================
+// HỘI THOẠI VÀ TRÍCH DẪN
+// ===========================================================================
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String   @db.VarChar(300) // sinh từ câu hỏi đầu tiên
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("conversations")
+}
+
+model Message {
+  id             String      @id @default(uuid()) @db.Uuid
+  conversationId String      @map("conversation_id") @db.Uuid
+  role           MessageRole
+  content        String      @db.Text
+  latencyMs      Int?        @map("latency_ms") // đo yêu cầu phi chức năng
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  conversation Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  citations    MessageCitation[]
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+/// Nối câu trả lời về đúng đoạn văn nguồn.
+///
+/// `quote`, `headingPath` và `page` được SAO CHÉP sang đây thay vì đọc qua chunk.
+/// Nhờ vậy khi tài liệu bị gỡ, lịch sử hội thoại cũ vẫn hiển thị được trích dẫn —
+/// chỉ mất đường dẫn mở file. Đó là lý do hai khóa ngoại cho phép NULL.
+model MessageCitation {
+  id         String  @id @default(uuid()) @db.Uuid
+  messageId  String  @map("message_id") @db.Uuid
+  chunkId    String? @map("chunk_id") @db.Uuid
+  documentId String? @map("document_id") @db.Uuid
+
+  rank        Int // thứ hạng trong kết quả truy hồi, khớp marker [n]
+  score       Float
+  quote       String  @db.Text
+  headingPath String? @map("heading_path") @db.Text
+  page        Int?
+
+  message  Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  chunk    Chunk?    @relation(fields: [chunkId], references: [id], onDelete: SetNull)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([messageId, rank])
+  @@map("message_citations")
+}
+
+// ===========================================================================
+// BỘ ĐÁNH GIÁ
+// ===========================================================================
+
+model EvalSet {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(200) // "golden-30"
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  questions EvalQuestion[]
+  runs      EvalRun[]
+
+  @@map("eval_sets")
+}
+
+model EvalQuestion {
+  id        String @id @default(uuid()) @db.Uuid
+  evalSetId String @map("eval_set_id") @db.Uuid
+  code      String @db.VarChar(50) // mã trong golden-questions.yaml
+  question  String @db.Text
+  /// Đơn vị của người hỏi giả định — cần thiết để kiểm chứng cách ly phạm vi:
+  /// cùng câu hỏi, khác đơn vị, phải ra khác kết quả.
+  askerDepartmentId String? @map("asker_department_id") @db.Uuid
+  note              String? @db.Text
+
+  evalSet    EvalSet         @relation(fields: [evalSetId], references: [id], onDelete: Cascade)
+  goldChunks EvalGoldChunk[]
+  results    EvalResult[]
+
+  @@unique([evalSetId, code])
+  @@map("eval_questions")
+}
+
+/// Các đoạn ĐÁNG LẼ phải được truy hồi cho một câu hỏi. Đây là "đáp án" để tính
+/// recall@k và MRR.
+model EvalGoldChunk {
+  id         String @id @default(uuid()) @db.Uuid
+  questionId String @map("question_id") @db.Uuid
+  chunkId    String @map("chunk_id") @db.Uuid
+
+  question EvalQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  chunk    Chunk        @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, chunkId])
+  @@map("eval_gold_chunks")
+}
+
+/// Mỗi dòng là một lần chạy bộ câu hỏi vàng với một cấu hình.
+/// Tiêu chí thành công số 4: bảng này phải có ít nhất 9 dòng để so sánh.
+model EvalRun {
+  id        String @id @default(uuid()) @db.Uuid
+  evalSetId String @map("eval_set_id") @db.Uuid
+  name      String @db.VarChar(200) // "structured-800-alpha-0.6-k10"
+
+  /// Cấu hình dạng JSON để đổi tham số không cần migration:
+  /// {"chunk_size":800,"overlap":100,"alpha":0.6,"top_k":10,"model":"...","dim":1536}
+  config Json
+
+  recallAt5    Float? @map("recall_at_5")
+  recallAt10   Float? @map("recall_at_10")
+  mrr          Float?
+  faithfulness Float?
+  avgLatencyMs Int?   @map("avg_latency_ms")
+
+  note      String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  evalSet EvalSet      @relation(fields: [evalSetId], references: [id], onDelete: Restrict)
+  results EvalResult[]
+
+  @@map("eval_runs")
+}
+
+model EvalResult {
+  id         String @id @default(uuid()) @db.Uuid
+  evalRunId  String @map("eval_run_id") @db.Uuid
+  questionId String @map("question_id") @db.Uuid
+
+  hit            Boolean
+  rankOfFirstHit Int?   @map("rank_of_first_hit") // NULL nếu trượt
+  latencyMs      Int?   @map("latency_ms")
+  /// Số đoạn mỗi nhánh của tìm kiếm lai đóng góp — dùng để giải thích lúc bảo vệ.
+  vectorHits  Int? @map("vector_hits")
+  keywordHits Int? @map("keyword_hits")
+
+  evalRun  EvalRun      @relation(fields: [evalRunId], references: [id], onDelete: Cascade)
+  question EvalQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([evalRunId, questionId])
+  @@map("eval_results")
+}

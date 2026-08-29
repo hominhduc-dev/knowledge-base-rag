@@ -1,0 +1,10 @@
+{
+  // Kiểm kiểu TOÀN BỘ mã nguồn, kể cả phần chạy bằng tsx và không vào bản build.
+  // `pnpm typecheck` dùng file này; `pnpm build` dùng tsconfig.json.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src/**/*.ts", "prisma/**/*.ts", "scripts/**/*.ts"]
+}

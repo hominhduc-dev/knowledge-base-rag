@@ -1,0 +1,118 @@
+# ---------------------------------------------------------------------------
+# Tàng Thư — toàn bộ hệ thống trong một lệnh.
+#
+#   docker compose up -d        chạy cả bốn dịch vụ
+#   docker compose up -d db     chỉ chạy Postgres, để phát triển trên máy chủ
+#
+# Hai tệp biến môi trường, phân vai rõ ràng:
+#   .env         hạ tầng — mật khẩu Postgres, cổng. Compose đọc trực tiếp.
+#   server/.env  ứng dụng — JWT, khóa Gemini, tham số truy hồi. Nạp vào container.
+#
+# `environment:` của dịch vụ `api` ghi đè `DATABASE_URL` trong `server/.env`, vì
+# tệp đó trỏ về `localhost` cho lúc chạy trên máy chủ, còn trong mạng Docker thì
+# máy chủ CSDL tên là `db`.
+# ---------------------------------------------------------------------------
+name: tang-thu
+
+services:
+  # --- Cơ sở dữ liệu -------------------------------------------------------
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tangthu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?thieu POSTGRES_PASSWORD trong .env}
+      POSTGRES_DB: ${POSTGRES_DB:-tangthu}
+      # Cho phép so sánh chuỗi tiếng Việt đúng thứ tự bảng chữ cái.
+      LANG: C.UTF-8
+    command:
+      - postgres
+      # Mặc định 64 MB là quá nhỏ để dựng chỉ mục HNSW trên vector 1536 chiều:
+      # chỉ mục ~500 MB ở quy mô 50.000 đoạn sẽ tràn ra đĩa và chậm hàng chục lần.
+      - -c
+      - maintenance_work_mem=512MB
+      # 512 MB thay vì 1 GB: máy phát triển còn phải chạy Next.js và trình soạn thảo.
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - work_mem=32MB
+      # Ghi lại truy vấn chậm hơn 300 ms — đúng ngưỡng p95 trong yêu cầu phi chức năng,
+      # nên bất cứ dòng nào xuất hiện ở đây là một lần vi phạm cần xem.
+      - -c
+      - log_min_duration_statement=300
+    ports:
+      # CHỈ mở ra máy chủ, không ra LAN. Postgres không bao giờ được lộ ra mạng lớp.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tangthu} -d ${POSTGRES_DB:-tangthu}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # --- API + worker --------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      # Ghi đè: trong mạng Docker, máy chủ CSDL tên là `db`, không phải localhost.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tangthu}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tangthu}
+      NODE_ENV: production
+      PORT: "4000"
+      # Trình duyệt gọi API qua Caddy ở cùng gốc, nên không cần liệt kê IP LAN.
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+    expose:
+      - "4000"
+
+  # --- Giao diện -----------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        # Đường dẫn TƯƠNG ĐỐI, có chủ đích. Next nhúng biến này vào gói tải về
+        # trình duyệt ngay lúc build, nên nếu ghi tuyệt đối thì phải build lại
+        # mỗi khi đổi địa chỉ máy chủ. Để tương đối thì trình duyệt tự dùng đúng
+        # máy nó vừa tải trang, chạy đúng cho localhost, IP LAN và cả đường hầm.
+        NEXT_PUBLIC_API_URL: /api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    depends_on:
+      - api
+    expose:
+      - "3000"
+
+  # --- Reverse proxy — điểm vào duy nhất -----------------------------------
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      # 0.0.0.0 để máy khác trong LAN vào được. Đây là dịch vụ DUY NHẤT mở ra LAN.
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

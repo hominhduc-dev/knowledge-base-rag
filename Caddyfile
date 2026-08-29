@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# Điểm vào duy nhất. Chỉ container này mở cổng ra LAN; web, api và db đều nằm kín
+# trong mạng nội bộ của Docker.
+#
+# Nhờ gộp giao diện và API về CÙNG MỘT GỐC, trình duyệt gọi `/api/...` tương đối
+# và không bao giờ cần biết địa chỉ máy chủ. Đây là cách gỡ tận gốc lỗi phổ biến
+# nhất khi demo LAN — khách vào được giao diện nhưng mọi lệnh gọi API thất bại vì
+# `localhost` trong gói JavaScript trỏ về chính máy khách.
+# ---------------------------------------------------------------------------
+
+:80 {
+	encode gzip
+
+	# --- API -----------------------------------------------------------------
+	handle /api/* {
+		reverse_proxy api:4000 {
+			# SSE: phải tắt đệm, nếu không Caddy giữ token lại và câu trả lời hiện
+			# ra một cục ở cuối thay vì chảy dần — mất hẳn hiệu ứng streaming.
+			flush_interval -1
+		}
+	}
+
+	# --- Giao diện -----------------------------------------------------------
+	handle {
+		reverse_proxy web:3000
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

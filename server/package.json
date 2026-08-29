@@ -1,0 +1,46 @@
+{
+  "name": "@tang-thu/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.check.json",
+    "netlab:tcp": "tsx src/netlab/tcp-server.ts",
+    "netlab:client": "tsx src/netlab/tcp-client.ts",
+    "netlab:http": "tsx src/netlab/http-server.ts",
+    "db:validate": "prisma validate",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:check": "tsx --env-file=.env prisma/check.ts",
+    "db:seed": "tsx --env-file=.env prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "6.16.3",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "unpdf": "^1.3.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.15.0",
+    "prisma": "6.16.3",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

@@ -1,5 +1,6 @@
 packages:
-  - "apps/*"
+  - "server"
+  - "web"
   - "packages/*"
 allowBuilds:
   # Prisma cần postinstall để tải query engine — thiếu là không generate được client
