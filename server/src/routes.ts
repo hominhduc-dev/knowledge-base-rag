@@ -9,6 +9,7 @@ import { Router } from "express";
 import { prisma } from "./config/prisma.js";
 import { ok } from "./lib/http.js";
 import { authRouter } from "./modules/auth/index.js";
+import { chatRouter } from "./modules/chat/index.js";
 import { documentsRouter } from "./modules/documents/index.js";
 import { retrievalRouter } from "./modules/retrieval/index.js";
 
@@ -31,13 +32,13 @@ routes.get("/health", async (_req, res) => {
 
 // --- Đã hiện thực -----------------------------------------------------------
 routes.use(authRouter); //      POST /auth/login · GET /auth/me · PUT /auth/password
+routes.use(chatRouter); //      POST /chat (SSE) · GET /conversations · /conversations/:id
 routes.use(documentsRouter); // /documents/* — liệt kê · chi tiết · chunks · tệp · tải lên
 routes.use(retrievalRouter); // POST /search
 
 // --- Chưa hiện thực ---------------------------------------------------------
 // Gắn thêm vào đây khi xong, mỗi module một dòng:
 //
-//   routes.use(chatRouter);       /chat (SSE) · /conversations/*        [TV3]
 //   routes.use(adminRouter);      /departments/* · /departments/:id/members [TV4]
 //   routes.use(evalRouter);       /eval/runs                            [Đức]
 //

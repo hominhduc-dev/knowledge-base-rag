@@ -5,43 +5,15 @@ import { Menu, Send } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/features/auth/useAuth";
-import { ApiError, apiPost } from "@/lib/api-client";
-import type { Source } from "@/lib/mock-data";
+import { ApiError } from "@/lib/api-client";
+import { streamChat, type ChatSource } from "@/lib/chat-stream";
 import { CitationDrawer } from "./CitationDrawer";
 import { MessageList } from "./MessageList";
 import type { ChatMessage } from "./MessageBubble";
 
-type SearchResult = {
-  items: Source[];
-  tookMs: number;
-  vectorHits: number;
-  keywordHits: number;
-};
-
-function compactExcerpt(source: Source): string {
-  const text = source.excerpt.replace(/\s+/g, " ").trim();
-  return text.length > 520 ? `${text.slice(0, 517).trim()}...` : text;
-}
-
-function buildSearchAnswer(sources: Source[], scope: string): string {
-  const top = sources.slice(0, 3);
-  const primary = top[0];
-  if (!primary) return "Không tìm thấy thông tin này trong tài liệu hiện có.";
-
-  const scopeNote = primary.unit === "Toàn trường" && scope !== "Toàn trường"
-    ? `Không tìm thấy đoạn riêng của ${scope} trong nhóm nguồn khớp nhất; nguồn dưới đây là quy định toàn trường áp dụng chung.`
-    : `Nguồn khớp nhất thuộc ${primary.unit}.`;
-  const related = top
-    .slice(1)
-    .map((source) => `${source.locator} [${source.n}]`)
-    .join("; ");
-
-  return [
-    `${scopeNote}`,
-    `${compactExcerpt(primary)} [${primary.n}]`,
-    related ? `Nguồn liên quan thêm: ${related}.` : "",
-  ].filter(Boolean).join("\n\n");
-}
+// Ghi chú: bản trước tự ghép câu trả lời từ các đoạn `/search` trả về
+// (`buildSearchAnswer`). Nay `POST /chat` sinh câu trả lời thật kèm marker `[n]`
+// nên phần ghép tay đó đã bỏ — giữ lại là hai nguồn sự thật cho cùng một thứ.
 
 export function ChatBox() {
   const currentUser = useCurrentUser();
@@ -55,6 +27,8 @@ export function ChatBox() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeCitation, setActiveCitation] = useState<number | null>(null);
   const [lastQuestion, setLastQuestion] = useState("");
+  // `null` là hội thoại mới; máy chủ trả về id ở sự kiện `done` của lượt đầu.
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   // Chỉ ADMIN được đổi phạm vi tra cứu; STUDENT bị khóa theo đơn vị của mình.
   //
@@ -86,22 +60,50 @@ export function ChatBox() {
     setLoading(true);
     setActiveCitation(null);
 
-    try {
-      const result = await apiPost<SearchResult>("/search", { query: text, topK: 3 });
-      if (result.items.length === 0) {
-        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "notfound", text: `Không tìm thấy thông tin này trong tài liệu hiện có của ${effectiveScope} và tài liệu toàn trường.` }]);
-        return;
-      }
+    // Một khung trả lời rỗng, dựng TRƯỚC khi token đầu tiên về. Các mảnh chữ sẽ
+    // được nối dần vào đúng khung này.
+    const answerId = crypto.randomUUID();
+    let daCoToken = false;
 
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "answer", text: buildSearchAnswer(result.items, effectiveScope), sources: result.items }]);
-      setPanelOpen(true);
+    try {
+      await streamChat(
+        { question: text, conversationId },
+        {
+          // `sources` luôn tới TRƯỚC token đầu tiên, nên panel nguồn dựng xong
+          // trước cả khi người dùng đọc được chữ nào — họ thấy hệ thống dựa vào
+          // tài liệu nào trước khi thấy nó nói gì.
+          onSources(items) {
+            setMessages((current) => [
+              ...current,
+              { id: answerId, role: "answer", text: "", sources: items as ChatSource[] },
+            ]);
+            if (items.length > 0) setPanelOpen(true);
+          },
+          onToken(chunk) {
+            daCoToken = true;
+            setMessages((current) =>
+              current.map((m) => (m.id === answerId ? { ...m, text: m.text + chunk } : m)),
+            );
+          },
+          onDone(info) {
+            // Giữ lại để lượt hỏi sau nối vào cùng một hội thoại.
+            setConversationId(info.conversationId);
+          },
+          onError(message) {
+            setMessages((current) => [
+              ...current.filter((m) => m.id !== answerId || daCoToken),
+              { id: crypto.randomUUID(), role: "error", text: message },
+            ]);
+          },
+        },
+      );
     } catch (error) {
       setMessages((current) => [
-        ...current,
+        ...current.filter((m) => m.id !== answerId),
         {
           id: crypto.randomUUID(),
           role: "error",
-          text: error instanceof ApiError ? error.message : "Không truy hồi được tài liệu. Vui lòng thử lại.",
+          text: error instanceof ApiError ? error.message : "Không gửi được câu hỏi. Vui lòng thử lại.",
         },
       ]);
     } finally {
@@ -117,6 +119,7 @@ export function ChatBox() {
 
   function newChat() {
     setMessages([]);
+    setConversationId(null);
     setPanelOpen(false);
     setActiveCitation(null);
     setSidebarOpen(false);

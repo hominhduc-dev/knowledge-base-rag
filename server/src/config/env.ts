@@ -25,6 +25,10 @@ const schema = z.object({
   GEMINI_API_KEY: z.string().default(""),
   GEMINI_EMBEDDING_MODEL: z.string().default("gemini-embedding-2"),
   GEMINI_GENERATION_MODEL: z.string().default("gemini-flash-latest"),
+  // Trần token cho câu trả lời. Model có bước suy nghĩ nội bộ và những token đó
+  // cũng tính vào trần, nên để rộng — đặt sát quá thì câu trả lời bị cắt cụt
+  // giữa chừng mà không có lỗi nào báo.
+  GENERATION_MAX_TOKENS: numeric(2048),
   // Phải khớp vector(1536) trong schema.prisma. Đổi số này mà không viết
   // migration đổi kiểu cột là mọi lần ghi vector bị Postgres từ chối.
   //
