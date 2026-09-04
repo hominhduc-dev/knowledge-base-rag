@@ -14,6 +14,14 @@
 /** Marker dạng `[1]`, `[12]`. Không khớp `[a]`, `[1.2]` hay `[]`. */
 const MARKER = /\[(\d{1,2})\]/g;
 
+/**
+ * Ranh giới câu: dấu kết câu theo sau bởi khoảng trắng, hoặc xuống dòng.
+ *
+ * Nhóm bắt để `split` GIỮ LẠI phần ngăn cách — nếu không, danh sách gạch đầu
+ * dòng sẽ bị ép thành một khối liền.
+ */
+const RANH_CAU = /((?<=[.!?…])\s+|\n+)/;
+
 export type GuardResult = {
   /** Văn bản đã gỡ các marker không hợp lệ. */
   text: string;
@@ -46,9 +54,55 @@ export function locMarker(text: string, soNguon: number): GuardResult {
   });
 
   // Gỡ marker để lại khoảng trắng thừa và khoảng trắng trước dấu câu.
-  const donDep = ra.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,;:!?])/g, "$1");
+  const donDep = gomMarkerLap(ra)
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([.,;:!?])/g, "$1");
 
   return { text: donDep, daDung, daGo };
+}
+
+/**
+ * Trong MỘT câu, mỗi số hiệu chỉ giữ lại lần xuất hiện CUỐI.
+ *
+ * Prompt yêu cầu mô hình đặt marker một lần ở cuối câu, nhưng nó hay chèn sau
+ * từng mệnh đề: "dưới 1,00 [1] hoặc dưới 1,20 [1]." Hai cái `[1]` trỏ cùng một
+ * đoạn nên cái đầu không thêm thông tin gì, chỉ cắt vụn câu văn.
+ *
+ * Giữ lần CUỐI chứ không phải lần đầu: marker đứng sau phần chữ nó chứng minh,
+ * nên đặt ở cuối mới bao được cả câu.
+ *
+ * Chỉ gộp trong phạm vi một câu. Mỗi gạch đầu dòng, mỗi câu là một khẳng định
+ * riêng và vẫn cần nguồn của nó — gộp toàn văn bản sẽ để cả đoạn trần trụi chỉ
+ * còn đúng một marker ở cuối.
+ *
+ * KHÔNG đụng tới `daDung`: mỗi số vẫn còn đúng một lần, tập nguồn được trích
+ * không đổi.
+ */
+function gomMarkerLap(text: string): string {
+  const phan = text.split(RANH_CAU);
+
+  // Bước 2 vì `split` có nhóm bắt: chỉ số chẵn là câu, lẻ là phần ngăn cách.
+  for (let i = 0; i < phan.length; i += 2) {
+    const cau = phan[i];
+    if (!cau || !cau.includes("[")) continue;
+
+    // Lượt một: đếm mỗi số xuất hiện bao nhiêu lần trong câu.
+    const tong = new Map<string, number>();
+    cau.replace(MARKER, (_, so: string) => {
+      tong.set(so, (tong.get(so) ?? 0) + 1);
+      return "";
+    });
+
+    // Lượt hai: đi lại từ đầu, chỉ giữ lần bằng đúng tổng — tức lần cuối.
+    const daGap = new Map<string, number>();
+    phan[i] = cau.replace(MARKER, (nguyenVan, so: string) => {
+      const lan = (daGap.get(so) ?? 0) + 1;
+      daGap.set(so, lan);
+      return lan === tong.get(so) ? nguyenVan : "";
+    });
+  }
+
+  return phan.join("");
 }
 
 /**

@@ -80,3 +80,46 @@ describe("coTrichDan — quyết định có thay bằng câu từ chối không
     assert.equal(coTrichDan(ket), true);
   });
 });
+
+describe("locMarker — gộp marker lặp trong cùng một câu", () => {
+  it("cùng một số lặp trong một câu thì chỉ giữ lần CUỐI", () => {
+    // Đúng trường hợp trong ảnh chụp màn hình: mô hình chèn sau từng mệnh đề.
+    const ket = locMarker(
+      "Sinh viên bị cảnh báo nếu điểm dưới 1,00 [1] hoặc tích lũy dưới 1,20 [1].",
+      3,
+    );
+    assert.equal(ket.text, "Sinh viên bị cảnh báo nếu điểm dưới 1,00 hoặc tích lũy dưới 1,20 [1].");
+    assert.deepEqual(ket.daDung, [1], "gộp không được làm đổi tập nguồn được trích");
+  });
+
+  it("hai số KHÁC nhau trong một câu thì giữ cả hai", () => {
+    const ket = locMarker("Cần đủ tín chỉ [1] và điểm từ 2,0 [2].", 3);
+    assert.equal(ket.text, "Cần đủ tín chỉ [1] và điểm từ 2,0 [2].");
+  });
+
+  it("cùng một số ở HAI câu khác nhau thì giữ cả hai", () => {
+    // Mỗi câu là một khẳng định riêng và vẫn cần nguồn của nó.
+    const ket = locMarker("Hạn nộp là 15/10 [1]. Nộp trễ bị phạt [1].", 2);
+    assert.equal(ket.text, "Hạn nộp là 15/10 [1]. Nộp trễ bị phạt [1].");
+  });
+
+  it("mỗi gạch đầu dòng giữ marker riêng, và xuống dòng không bị nuốt", () => {
+    const vao = "* Đủ tín chỉ [2]\n* Điểm từ 2,0 [2]";
+    assert.equal(locMarker(vao, 3).text, vao);
+  });
+
+  it("hai marker dính liền nhau cũng gộp được", () => {
+    assert.equal(locMarker("Điều kiện xét tốt nghiệp [1][1].", 2).text, "Điều kiện xét tốt nghiệp [1].");
+  });
+
+  it("gộp chạy SAU khi gỡ marker bịa, không cứu marker ngoài dải", () => {
+    const ket = locMarker("Cần đủ tín chỉ [1] và nộp hồ sơ [9] đúng hạn [1].", 3);
+    assert.equal(ket.text, "Cần đủ tín chỉ và nộp hồ sơ đúng hạn [1].");
+    assert.deepEqual(ket.daGo, [9]);
+  });
+
+  it("văn bản không có marker nào thì giữ nguyên", () => {
+    const vao = "Tôi không tìm thấy thông tin này trong tài liệu.";
+    assert.equal(locMarker(vao, 5).text, vao);
+  });
+});
