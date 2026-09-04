@@ -21,8 +21,9 @@
 | Xác thực | **Chạy thật, đã kiểm bằng curl** | 2 vai, phạm vi qua `department_members` |
 | Cách ly phạm vi | **6/6 test đạt trên dữ liệu thật** | `lib/scope.ts` là nơi duy nhất giữ quy tắc |
 | Module `netlab` | **Xong, 16/16 test đạt** | TCP 9999 · HTTP tự viết 8080 |
-| Docker | `db` chạy được; `api`/`web` **chưa build thử** | 4 dịch vụ + Caddy đã viết |
+| Docker | **Cả 4 dịch vụ chạy được** | `docker compose up` đã kiểm; vào qua Caddy cổng 80 |
 | Truy hồi | **Đã có truy vấn lai thật** | RRF vector + toàn văn, lọc phạm vi trong SQL |
+| Hỏi đáp | **Chạy thật qua `/chat`** | SSE, có ràng buộc trích dẫn và từ chối |
 | Frontend | **Đăng nhập và chat box đã nối API thật** | `demoUsers` đã xóa; chat gọi `/search`; documents/admin còn mock |
 | Tài liệu | **Gần khớp** | Chỉ còn `cau-truc-thu-muc.md` chưa cập nhật |
 | CI/CD | Chưa có `.github/` | Test rò rỉ phạm vi phải là điều kiện chặn merge |
@@ -34,7 +35,8 @@
 - [x] Hai Dockerfile build nhiều tầng; `web` dùng `output: "standalone"`.
 - [x] `Caddyfile` gộp giao diện và API về cùng gốc, `flush_interval -1` cho SSE.
 - [x] Postgres 16.15 + pgvector, `maintenance_work_mem=512MB`.
-- [ ] Chưa chạy `docker compose build` cho `api` và `web`.
+- [x] `docker compose build` cho `api` và `web` — đã build và chạy đủ 4 dịch vụ.
+- [x] SSE xuyên Caddy: token cách nhau ~80 ms, không dồn về cuối.
 - [ ] Chưa thử demo LAN từ máy khác.
 
 ## Cơ sở dữ liệu
@@ -73,13 +75,17 @@
 - [x] `worker/ingest.worker.ts` — `FOR UPDATE SKIP LOCKED`, thu hồi job treo, dừng
       sau 3 lần thử; lỗi định dạng thì không thử lại.
 - [x] `middleware/upload.middleware.ts` — multer, trần 20 MB, chỉ PDF/DOCX.
-- [ ] `modules/chat/` — `POST /chat` SSE và `/conversations/*` (TV3).
+- [x] `modules/chat/` — `POST /chat` SSE · `/conversations` · `/conversations/:id`.
+- [x] `rag/prompt.ts` · `rag/generate.ts` · `rag/citation-guard.ts`.
+- [x] Ràng buộc trích dẫn ở TẦNG MÃ NGUỒN: không có nguồn thì không gọi mô hình;
+      marker `[n]` không khớp nguồn bị gỡ; không còn trích dẫn nào thì thay bằng
+      câu từ chối. 11 test.
 - [ ] `/departments/*` và `/departments/:id/members` (TV4).
 - [x] `retrieval.sql.ts` — truy vấn lai thật: RRF vector + toàn văn, lọc phạm vi trong
       `WHERE`, JOIN embedding có `e.model = MODEL_HIEN_TAI`. Đã sửa regression
       “chuẩn đầu ra sinh viên công nghệ thông tin” để top 1 về `Chương 2 > Điều 2`.
 - [x] `rag/embed.ts` — chuẩn hóa L2, cache theo `content_hash`, lô 64, lùi có nhiễu.
-- [ ] `rag/` — còn `retrieve.ts` · `generate.ts` · `prompt.ts`.
+
 - [!] **Bẫy đa model:** có 2 model trong `chunk_embeddings`. Truy vấn JOIN mà quên
       `AND e.model = ...` sẽ trả mỗi đoạn HAI lần, không báo lỗi. Dùng hằng số
       `MODEL_HIEN_TAI` trong `rag/embed.ts`. `db:check` đã cảnh báo việc này.
