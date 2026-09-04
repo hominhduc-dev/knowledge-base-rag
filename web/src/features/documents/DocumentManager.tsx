@@ -1,123 +1,380 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { documentChunks, documents, type KnowledgeDocument } from "@/lib/mock-data";
+import { useCurrentUser } from "@/features/auth/useAuth";
+import { ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import {
+  chiTiet,
+  danhSach,
+  danhSachDoan,
+  dinhDangNgay,
+  taiLen,
+  tienDo,
+  xoa,
+  type ChunkItem,
+  type DocumentDetail,
+  type KnowledgeDocument,
+} from "./api";
 import { DocumentTable } from "./DocumentTable";
 import { UploadDropzone } from "./UploadDropzone";
 
-type UploadItem = { id: string; name: string; progress: number; phase: "upload" | "process" | "done" };
-type Filter = "Tất cả" | "Của khoa" | "Toàn trường";
+type Filter = "all" | "department" | "global";
+
+const NHAN_LOC: Record<Filter, string> = {
+  all: "Tất cả",
+  department: "Của khoa",
+  global: "Toàn trường",
+};
+
+/**
+ * Một tệp đang được nạp.
+ *
+ * `progress` chỉ có ý nghĩa ở pha `process`, và là con số THẬT máy chủ báo qua
+ * `/documents/:id/status`. Bản trước chạy một thanh tiến trình giả bằng
+ * `setInterval` — nó luôn chạy đều đặn tới 100% kể cả khi việc xử lý đã hỏng.
+ */
+type UploadItem = {
+  key: string;
+  name: string;
+  documentId: string | null;
+  phase: "upload" | "process" | "done" | "error";
+  progress: number;
+  chunks: number;
+  message: string | null;
+};
 
 export function DocumentManager() {
+  const user = useCurrentUser();
+  const laAdmin = user?.roleCode === "ADMIN";
+
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<Filter>("Tất cả");
-  const [openDocument, setOpenDocument] = useState<KnowledgeDocument | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [items, setItems] = useState<KnowledgeDocument[]>([]);
+  const [dangTai, setDangTai] = useState(true);
+  const [loi, setLoi] = useState<string | null>(null);
+  const [dangXoa, setDangXoa] = useState<string | null>(null);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
-  const intervalRef = useRef<number | null>(null);
+
+  const [moTaiLieu, setMoTaiLieu] = useState<DocumentDetail | null>(null);
+  const [doanVan, setDoanVan] = useState<ChunkItem[]>([]);
+  const [dangTaiChiTiet, setDangTaiChiTiet] = useState(false);
+
+  // --- Danh sách ------------------------------------------------------------
+  //
+  // Đánh số thứ tự mỗi lần gọi, và chỉ nhận kết quả của lần MỚI NHẤT.
+  //
+  // Không có chốt này thì đổi bộ lọc nhanh sẽ hỏng: bấm "Của khoa" rồi bấm ngay
+  // "Toàn trường", nếu phản hồi của lần đầu về SAU thì nó ghi đè lên kết quả
+  // đúng — màn hình hiện tài liệu của khoa trong khi nút "Toàn trường" đang
+  // sáng. Lỗi không ném exception nào và chỉ xuất hiện khi mạng chậm, nên rất
+  // khó tái hiện trên máy phát triển.
+  const luotGoi = useRef(0);
+
+  const nap = useCallback(async () => {
+    const luot = ++luotGoi.current;
+    setLoi(null);
+    try {
+      const kq = await danhSach({ q: query.trim() || undefined, scope: filter });
+      if (luot !== luotGoi.current) return; // đã có lần gọi mới hơn
+      setItems(kq.items);
+    } catch (error) {
+      if (luot !== luotGoi.current) return;
+      setLoi(error instanceof ApiError ? error.message : "Không tải được danh sách tài liệu.");
+    } finally {
+      if (luot === luotGoi.current) setDangTai(false);
+    }
+  }, [query, filter]);
 
   useEffect(() => {
-    if (!uploads.some((item) => item.phase !== "done")) {
-      if (intervalRef.current) window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-      return;
-    }
-    if (intervalRef.current) return;
-    intervalRef.current = window.setInterval(() => {
-      setUploads((items) => items.map((item) => {
-        if (item.phase === "done") return item;
-        const next = Math.min(100, item.progress + (item.phase === "upload" ? 14 : 9));
-        if (next < 100) return { ...item, progress: next };
-        if (item.phase === "upload") return { ...item, progress: 0, phase: "process" };
-        return { ...item, progress: 100, phase: "done" };
-      }));
-    }, 220);
-    return () => {
-      if (intervalRef.current) window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    };
-  }, [uploads]);
+    // Chờ một nhịp trước khi gọi, để gõ từng ký tự trong ô tìm kiếm không bắn
+    // một request mỗi phím.
+    const hen = window.setTimeout(() => void nap(), 250);
+    return () => window.clearTimeout(hen);
+  }, [nap]);
 
-  function addFiles(files: File[]) {
-    setUploads((items) => [...items, ...files.map((file) => ({ id: crypto.randomUUID(), name: file.name, progress: 0, phase: "upload" as const }))]);
+  // --- Theo dõi tiến trình xử lý -------------------------------------------
+  useEffect(() => {
+    const dangChay = uploads.filter((u) => u.documentId && (u.phase === "process" || u.phase === "upload"));
+    if (dangChay.length === 0) return;
+
+    const hen = window.setInterval(async () => {
+      let coHoanTat = false;
+
+      for (const u of dangChay) {
+        if (!u.documentId) continue;
+        try {
+          const t = await tienDo(u.documentId);
+          setUploads((cur) =>
+            cur.map((x) =>
+              x.key !== u.key
+                ? x
+                : {
+                    ...x,
+                    phase: t.status === "ready" ? "done" : t.status === "failed" ? "error" : "process",
+                    progress: t.progress,
+                    chunks: t.chunks,
+                    message: t.error,
+                  },
+            ),
+          );
+          if (t.status === "ready" || t.status === "failed") coHoanTat = true;
+        } catch {
+          // Một lần hỏi hụt không đáng dừng cả vòng theo dõi.
+        }
+      }
+
+      // Xong một tài liệu thì nạp lại danh sách để thấy nó xuất hiện.
+      if (coHoanTat) void nap();
+    }, 1500);
+
+    return () => window.clearInterval(hen);
+  }, [uploads, nap]);
+
+  async function themTep(files: File[]) {
+    for (const file of files) {
+      const key = crypto.randomUUID();
+      // Tiêu đề mặc định lấy từ tên tệp, bỏ phần đuôi.
+      const title = file.name.replace(/\.(pdf|docx)$/i, "").trim() || file.name;
+
+      setUploads((cur) => [
+        ...cur,
+        { key, name: file.name, documentId: null, phase: "upload", progress: 0, chunks: 0, message: null },
+      ]);
+
+      try {
+        const kq = await taiLen(file, title);
+        setUploads((cur) =>
+          cur.map((x) => (x.key === key ? { ...x, documentId: kq.documentId, phase: "process" } : x)),
+        );
+      } catch (error) {
+        setUploads((cur) =>
+          cur.map((x) =>
+            x.key === key
+              ? {
+                  ...x,
+                  phase: "error",
+                  message: error instanceof ApiError ? error.message : "Tải lên thất bại.",
+                }
+              : x,
+          ),
+        );
+      }
+    }
   }
 
-  const filtered = useMemo(() => documents.filter((document) => {
-    const matchesFilter = filter === "Tất cả" || (filter === "Của khoa" ? document.unit !== "Toàn trường" : document.unit === "Toàn trường");
-    return matchesFilter && document.name.toLocaleLowerCase("vi").includes(query.trim().toLocaleLowerCase("vi"));
-  }), [filter, query]);
+  async function moChiTiet(doc: KnowledgeDocument) {
+    setDangTaiChiTiet(true);
+    try {
+      const [ct, doan] = await Promise.all([chiTiet(doc.id), danhSachDoan(doc.id)]);
+      setMoTaiLieu(ct);
+      setDoanVan(doan.items);
+    } catch (error) {
+      setLoi(error instanceof ApiError ? error.message : "Không mở được tài liệu.");
+    } finally {
+      setDangTaiChiTiet(false);
+    }
+  }
 
-  if (openDocument) {
-    const chunks = documentChunks[openDocument.code] ?? [];
+  async function xoaTaiLieu(doc: KnowledgeDocument) {
+    if (!window.confirm(`Xóa "${doc.name}"? Thao tác này không hoàn tác được.`)) return;
+    setDangXoa(doc.id);
+    try {
+      await xoa(doc.id);
+      await nap();
+    } catch (error) {
+      setLoi(error instanceof ApiError ? error.message : "Không xóa được tài liệu.");
+    } finally {
+      setDangXoa(null);
+    }
+  }
+
+  // ==========================================================================
+  // MÀN CHI TIẾT
+  // ==========================================================================
+  if (moTaiLieu) {
+    const d = moTaiLieu.document;
     return (
       <section className="mx-auto w-full max-w-[1120px] px-6 pb-20 pt-10 sm:px-8">
-        <button type="button" onClick={() => setOpenDocument(null)} className="mb-5 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-indigo"><ArrowLeft className="size-4" /> Tất cả tài liệu</button>
-        <h1 className="max-w-[24em] font-serif text-[30px] font-semibold leading-[38px]">{openDocument.name}</h1>
+        <button
+          type="button"
+          onClick={() => { setMoTaiLieu(null); setDoanVan([]); }}
+          className="mb-5 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-indigo"
+        >
+          <ArrowLeft className="size-4" /> Tất cả tài liệu
+        </button>
+
+        <h1 className="max-w-[24em] font-serif text-[30px] font-semibold leading-[38px]">{d.name}</h1>
+
         <dl className="mt-3.5 flex flex-wrap gap-x-8 gap-y-4 border-b border-border pb-6">
-          {[
-            ["Đơn vị", openDocument.unit], ["Số hiệu", openDocument.code], ["Số đoạn", String(openDocument.chunks)], ["Cập nhật", openDocument.updated],
-          ].map(([label, value]) => (
-            <div key={label}>
-              <dt className="text-[13px] font-medium leading-5 text-muted">{label}</dt>
-              <dd className={cn("m-0 text-[15px] leading-[26px]", label === "Số hiệu" || label === "Số đoạn" ? "font-mono text-[13px]" : "")}>{value}</dd>
+          {(
+            [
+              ["Đơn vị", d.unit, false],
+              ["Định dạng", d.sourceType, true],
+              ["Số trang", d.pageCount === null ? "—" : String(d.pageCount), true],
+              ["Số đoạn", String(moTaiLieu.chunkCount), true],
+              ["Người tải lên", d.uploadedBy, false],
+              ["Cập nhật", dinhDangNgay(d.updated), false],
+            ] as [string, string, boolean][]
+          ).map(([nhan, giaTri, mono]) => (
+            <div key={nhan}>
+              <dt className="text-[13px] font-medium leading-5 text-muted">{nhan}</dt>
+              <dd className={cn("m-0 text-[15px] leading-[26px]", mono && "font-mono text-[13px]")}>
+                {giaTri}
+              </dd>
             </div>
           ))}
         </dl>
+
+        {d.errorMessage && (
+          <p role="alert" className="mt-5 rounded-[8px] border border-danger/30 bg-danger/5 px-4 py-3 text-sm leading-[22px] text-danger">
+            {d.errorMessage}
+          </p>
+        )}
+
         <h2 className="mb-1 mt-7 font-serif text-[22px] font-semibold leading-[30px]">Các đoạn đã tách</h2>
-        <p className="mb-5 max-w-[60ch] text-sm leading-[22px] text-secondary">Mỗi đoạn giữ nguyên số hiệu điều khoản và số trang trong văn bản gốc để trích dẫn chính xác.</p>
-        {chunks.length ? chunks.map((chunk) => (
-          <article key={chunk.id} className="grid gap-3 border-b border-border py-[18px] sm:grid-cols-[200px_1fr] sm:gap-6">
-            <div>
-              <div className="font-mono text-[13px] leading-5 text-muted">{chunk.id}</div>
-              <div className="mt-1 font-mono text-[13px] leading-5">{chunk.locator}</div>
-            </div>
-            <p className="reading-width m-0 text-[15px] leading-[26px]">{chunk.text}</p>
-          </article>
-        )) : <p className="mt-6 text-[15px] leading-[26px] text-muted">Bản dựng chưa nạp nội dung đoạn cho tài liệu này.</p>}
+        <p className="mb-5 max-w-[60ch] text-sm leading-[22px] text-secondary">
+          Mỗi đoạn giữ nguyên vị trí trong cấu trúc văn bản và số trang gốc, để trích dẫn chỉ đúng chỗ.
+        </p>
+
+        {doanVan.length ? (
+          doanVan.map((c) => (
+            <article key={c.id} className="grid gap-3 border-b border-border py-[18px] sm:grid-cols-[220px_1fr] sm:gap-6">
+              <div>
+                <div className="font-mono text-[13px] leading-5 text-muted">#{c.index}</div>
+                <div className="mt-1 font-mono text-[13px] leading-5">{c.locator}</div>
+              </div>
+              <p className="reading-width m-0 text-[15px] leading-[26px]">{c.text}</p>
+            </article>
+          ))
+        ) : (
+          <p className="mt-6 text-[15px] leading-[26px] text-muted">
+            Tài liệu này chưa có đoạn nào — có thể việc xử lý chưa xong hoặc đã thất bại.
+          </p>
+        )}
       </section>
     );
   }
 
+  // ==========================================================================
+  // MÀN DANH SÁCH
+  // ==========================================================================
   return (
     <section className="mx-auto w-full max-w-[1120px] px-6 pb-20 pt-10 sm:px-8">
       <div className="flex flex-wrap items-end gap-5">
         <div>
           <h1 className="font-serif text-[30px] font-semibold leading-[38px]">Tài liệu</h1>
-          <p className="mt-2 text-[15px] leading-[26px] text-secondary">Giáo vụ Khoa Công nghệ Thông tin · quản lý tài liệu của khoa</p>
+          <p className="mt-2 text-[15px] leading-[26px] text-secondary">
+            {/* Lấy từ phiên đăng nhập, không cứng hóa một khoa như bản trước. */}
+            {user ? `${user.role} · ${user.scope}` : ""}
+            {laAdmin ? " · quản lý tài liệu" : " · chỉ xem"}
+          </p>
         </div>
-        <Button className="ml-auto" onClick={() => document.getElementById("mock-upload")?.click()}><Upload className="size-4" /> Tải tài liệu lên</Button>
-        <input id="mock-upload" type="file" accept=".pdf,.docx" multiple className="hidden" onChange={(event) => addFiles(Array.from(event.target.files ?? []))} />
+
+        {/* Chỉ ADMIN mới tải lên được. Máy chủ chặn bằng `requireAdmin`; ẩn ở đây
+            chỉ để sinh viên không bấm vào rồi nhận 403. */}
+        {laAdmin && (
+          <>
+            <Button className="ml-auto" onClick={() => document.getElementById("chon-tep")?.click()}>
+              <Upload className="size-4" /> Tải tài liệu lên
+            </Button>
+            <input
+              id="chon-tep"
+              type="file"
+              accept=".pdf,.docx"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                void themTep(Array.from(event.target.files ?? []));
+                event.target.value = "";
+              }}
+            />
+          </>
+        )}
       </div>
 
-      <UploadDropzone onFiles={addFiles} />
+      {laAdmin && <UploadDropzone onFiles={(files) => void themTep(files)} />}
 
       {uploads.length > 0 && (
         <div className="mt-5 overflow-hidden rounded-[12px] border border-border bg-surface">
           {uploads.map((item) => (
-            <div key={item.id} className="border-b border-sunken px-[18px] py-3.5 last:border-0">
+            <div key={item.key} className="border-b border-sunken px-[18px] py-3.5 last:border-0">
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1 truncate text-[15px] font-medium leading-6">{item.name}</div>
-                <div className="font-mono text-[13px] text-secondary">{item.phase === "upload" ? `Đang tải ${item.progress}%` : item.phase === "process" ? `Đang tách đoạn ${item.progress}%` : "Sẵn sàng · 41 đoạn"}</div>
+                <div className={cn("font-mono text-[13px]", item.phase === "error" ? "text-danger" : "text-secondary")}>
+                  {item.phase === "upload"
+                    ? "Đang tải lên…"
+                    : item.phase === "process"
+                      ? `Đang tách đoạn ${item.progress}%`
+                      : item.phase === "done"
+                        ? `Sẵn sàng · ${item.chunks} đoạn`
+                        : "Thất bại"}
+                </div>
               </div>
-              <div className="mt-2.5 h-[3px] overflow-hidden rounded-sm bg-sunken"><div className={cn("h-full transition-[width] duration-200", item.phase === "done" ? "bg-success" : "bg-warning")} style={{ width: `${item.phase === "done" ? 100 : item.progress}%` }} /></div>
+              <div className="mt-2.5 h-[3px] overflow-hidden rounded-sm bg-sunken">
+                <div
+                  className={cn(
+                    "h-full transition-[width] duration-300",
+                    item.phase === "done" ? "bg-success" : item.phase === "error" ? "bg-danger" : "bg-warning",
+                  )}
+                  style={{ width: `${item.phase === "done" || item.phase === "error" ? 100 : item.progress}%` }}
+                />
+              </div>
+              {item.message && (
+                <p className="mt-2 text-[13px] leading-5 text-danger">{item.message}</p>
+              )}
             </div>
           ))}
         </div>
       )}
 
       <div className="mt-8 flex flex-wrap items-center gap-3">
-        <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm theo tên tài liệu…" className="min-w-[220px] flex-1" />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Tìm theo tên tài liệu…"
+          className="min-w-[220px] flex-1"
+        />
         <div className="flex gap-1.5">
-          {(["Tất cả", "Của khoa", "Toàn trường"] as Filter[]).map((item) => (
-            <button key={item} type="button" onClick={() => setFilter(item)} className={cn("min-h-11 rounded-[8px] border px-3.5 text-sm", filter === item ? "border-primary bg-sunken font-medium" : "border-border bg-transparent")}>{item}</button>
+          {(Object.keys(NHAN_LOC) as Filter[]).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={cn(
+                "min-h-11 rounded-[8px] border px-3.5 text-sm",
+                filter === f ? "border-primary bg-sunken font-medium" : "border-border bg-transparent",
+              )}
+            >
+              {NHAN_LOC[f]}
+            </button>
           ))}
         </div>
       </div>
 
-      <DocumentTable documents={filtered} onOpen={setOpenDocument} />
+      {loi && (
+        <p role="alert" className="mt-5 text-sm leading-[22px] text-danger">{loi}</p>
+      )}
+
+      {dangTai || dangTaiChiTiet ? (
+        <p className="my-6 text-[15px] leading-[26px] text-muted">Đang tải…</p>
+      ) : (
+        <>
+          <DocumentTable
+            documents={items}
+            onOpen={(d) => void moChiTiet(d)}
+            onDelete={(d) => void xoaTaiLieu(d)}
+            dangXoa={dangXoa}
+          />
+          <p className="mt-5 text-[13px] leading-5 text-muted">
+            {items.length} tài liệu trong phạm vi của bạn.
+            {!laAdmin && " Chỉ quản trị viên mới tải lên hoặc gỡ tài liệu."}
+          </p>
+        </>
+      )}
     </section>
   );
 }

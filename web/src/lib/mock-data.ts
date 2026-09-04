@@ -128,28 +128,11 @@ export function mockAnswer(question: string): { answer: string; sources: Source[
   return null;
 }
 
-export const documents: KnowledgeDocument[] = [
-  { name: "Quy chế đào tạo trình độ đại học", code: "1234/QĐ-ĐHKTĐN", unit: "Toàn trường", status: "ready", chunks: 142, updated: "12/08/2026" },
-  { name: "Sổ tay sinh viên 2025–2026", code: "STSV-2025", unit: "Toàn trường", status: "ready", chunks: 96, updated: "02/08/2026" },
-  { name: "Quy định về đồ án tốt nghiệp — Khoa Công nghệ Thông tin", code: "88/QĐ-CNTT", unit: "Khoa Công nghệ Thông tin", status: "ready", chunks: 38, updated: "20/08/2026" },
-  { name: "Hướng dẫn thủ tục hành chính — Phòng Đào tạo", code: "HD-PĐT-03", unit: "Toàn trường", status: "ready", chunks: 54, updated: "18/07/2026" },
-  { name: "Đề cương chi tiết học phần Kỹ thuật lập trình", code: "ĐC-IT2030", unit: "Khoa Công nghệ Thông tin", status: "processing", chunks: 0, updated: "22/08/2026" },
-  { name: "Quy định thực tập doanh nghiệp — Khoa Công nghệ Thông tin", code: "91/QĐ-CNTT", unit: "Khoa Công nghệ Thông tin", status: "error", chunks: 0, updated: "21/08/2026" },
-  { name: "Thông báo tuyển sinh cao học 2026", code: "TB-45/2026", unit: "Toàn trường", status: "ready", chunks: 12, updated: "05/08/2026" },
-];
-
-export const documentChunks: Record<string, { id: string; locator: string; text: string }[]> = {
-  "1234/QĐ-ĐHKTĐN": graduationSources.map((source, index) => ({
-    id: `1234/QĐ-ĐHKTĐN#${String(index + 1).padStart(3, "0")}`,
-    locator: source.locator,
-    text: source.excerpt,
-  })),
-  "88/QĐ-CNTT": [
-    { id: "88/QĐ-CNTT#001", locator: "Điều 3, Khoản 1 · Trang 2", text: "Sinh viên được nhận đồ án tốt nghiệp khi đã tích lũy tối thiểu 105 tín chỉ và không nợ quá 02 học phần bắt buộc của chương trình." },
-    { id: "88/QĐ-CNTT#002", locator: "Điều 5, Khoản 2 · Trang 4", text: "Mỗi giảng viên hướng dẫn không quá 08 sinh viên làm đồ án tốt nghiệp trong một học kỳ." },
-    { id: "88/QĐ-CNTT#003", locator: "Điều 7, Khoản 1 · Trang 6", text: "Đồ án được bảo vệ trước hội đồng gồm tối thiểu 03 thành viên; đồ án đạt khi điểm trung bình của hội đồng từ 4,0 trở lên." },
-  ],
-};
+// `documents` và `documentChunks` đã được gỡ: màn Tài liệu nay gọi thẳng
+// `GET /documents` và `GET /documents/:id/chunks`. Xem `features/documents/api.ts`.
+//
+// Giữ lại dữ liệu giả song song với API thật là để hai nguồn sự thật cùng tồn
+// tại, và người kiểm thử không biết mình đang nhìn cái nào.
 
 export const departments = [
   { name: "Khoa Công nghệ Thông tin", kind: "Khoa · 4 bộ môn", docs: 24, users: 1180, staff: "Trần Thị Hoà" },
