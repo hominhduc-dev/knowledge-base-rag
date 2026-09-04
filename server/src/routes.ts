@@ -32,7 +32,7 @@ routes.get("/health", async (_req, res) => {
 // --- Đã hiện thực -----------------------------------------------------------
 routes.use(authRouter); //      POST /auth/login · GET /auth/me · PUT /auth/password
 routes.use(documentsRouter); // /documents/* — liệt kê · chi tiết · chunks · tệp · tải lên
-routes.use(retrievalRouter); // POST /search   (bản tạm: 3 kết quả cứng)
+routes.use(retrievalRouter); // POST /search
 
 // --- Chưa hiện thực ---------------------------------------------------------
 // Gắn thêm vào đây khi xong, mỗi module một dòng:

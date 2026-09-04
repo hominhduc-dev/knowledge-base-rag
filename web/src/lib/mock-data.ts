@@ -19,9 +19,9 @@ export type KnowledgeDocument = {
 
 export const sampleQuestions = [
   "Điều kiện xét tốt nghiệp là gì?",
+  "Chứng chỉ nào được quy đổi chuẩn đầu ra ngoại ngữ, tin học?",
   "Bao nhiêu tín chỉ thì bị cảnh báo học vụ?",
   "Thủ tục xin bảo lưu kết quả học tập?",
-  "Hạn nộp học phí học kỳ này?",
 ];
 
 export const history = [

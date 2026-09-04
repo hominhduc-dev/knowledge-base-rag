@@ -22,8 +22,8 @@
 | Cách ly phạm vi | **6/6 test đạt trên dữ liệu thật** | `lib/scope.ts` là nơi duy nhất giữ quy tắc |
 | Module `netlab` | **Xong, 16/16 test đạt** | TCP 9999 · HTTP tự viết 8080 |
 | Docker | `db` chạy được; `api`/`web` **chưa build thử** | 4 dịch vụ + Caddy đã viết |
-| Truy hồi | **Vector đã chạy**; `/search` vẫn là bản tạm | Còn thiếu `retrieval.sql.ts` truy vấn lai |
-| Frontend | **Đăng nhập đã nối API thật** | `demoUsers` đã xóa; các màn khác vẫn mock |
+| Truy hồi | **Đã có truy vấn lai thật** | RRF vector + toàn văn, lọc phạm vi trong SQL |
+| Frontend | **Đăng nhập và chat box đã nối API thật** | `demoUsers` đã xóa; chat gọi `/search`; documents/admin còn mock |
 | Tài liệu | **Gần khớp** | Chỉ còn `cau-truc-thu-muc.md` chưa cập nhật |
 | CI/CD | Chưa có `.github/` | Test rò rỉ phạm vi phải là điều kiện chặn merge |
 
@@ -46,9 +46,10 @@
 - [x] `db:check` — **27/27 đạt**, có kiểm cả chuẩn L2 của vector.
 - [x] `db:seed` — 5 đơn vị · 6 cán bộ · 57 sinh viên · 7 tài liệu · 13 đoạn văn.
 - [x] Cặp đối chứng đổi sang CNTT (105 tín chỉ) ↔ Kiến trúc (90 tín chỉ).
-- [x] **Sinh vector nhúng cho 13 đoạn mồi** — `db:embed` chạy đạt, chuẩn L2 = 1.000000.
+- [x] **Sinh vector nhúng cho 13 đoạn mồi + 2 PDF thật** — `db:embed`/pipeline chạy
+      đạt, `gemini-embedding-2` hiện có 30 vector, chuẩn L2 = 1.000000.
 - [x] Đổi sang **`gemini-embedding-2`**. Bảng hiện giữ CẢ HAI bộ vector (13 của
-      `-001`, 13 của `-2`) — đúng thiết kế đa model, phục vụ so sánh ở Sprint 4.
+      `-001`, 30 của `-2`) — đúng thiết kế đa model, phục vụ so sánh ở Sprint 4.
 - [!] **Trước Sprint 4:** `seed.ts` xóa-rồi-tạo lại `chunks`, mà `eval_gold_chunks.chunk_id`
       có `ON DELETE CASCADE` — chạy lại seed sẽ xóa sạch liên kết câu hỏi vàng, không báo
       gì. Chưa hại vì bộ `golden-30` còn rỗng. Xem `docs/erd.md` mục 5.1.
@@ -62,8 +63,10 @@
 - [x] `middleware/role` — `requireRole` / `requireAdmin`.
 - [x] `modules/auth/` — `POST /auth/login` · `GET /auth/me` · `PUT /auth/password`,
       trả kèm `memberships[]`.
+- [x] Quy ước mật khẩu seed: sinh viên dùng chính MSSV; cán bộ/admin dùng
+      `Tangthu@123`.
 - [x] `GET /health` — `{status, uptime, pendingJobs}`.
-- [x] `modules/retrieval/` — `POST /search`, bản tạm 3 kết quả cứng.
+- [x] `modules/retrieval/` — `POST /search`, truy hồi lai thật.
 - [x] `modules/documents/` — 9 endpoint: liệt kê · chi tiết · chunks · trạng thái ·
       tệp gốc · tải lên · sửa · xóa · chạy lại.
 - [x] `rag/chunk.ts` — cắt theo Điều/Khoản, 40 test đạt.
@@ -72,7 +75,9 @@
 - [x] `middleware/upload.middleware.ts` — multer, trần 20 MB, chỉ PDF/DOCX.
 - [ ] `modules/chat/` — `POST /chat` SSE và `/conversations/*` (TV3).
 - [ ] `/departments/*` và `/departments/:id/members` (TV4).
-- [ ] `retrieval.sql.ts` — truy vấn lai thật.
+- [x] `retrieval.sql.ts` — truy vấn lai thật: RRF vector + toàn văn, lọc phạm vi trong
+      `WHERE`, JOIN embedding có `e.model = MODEL_HIEN_TAI`. Đã sửa regression
+      “chuẩn đầu ra sinh viên công nghệ thông tin” để top 1 về `Chương 2 > Điều 2`.
 - [x] `rag/embed.ts` — chuẩn hóa L2, cache theo `content_hash`, lô 64, lùi có nhiễu.
 - [ ] `rag/` — còn `retrieve.ts` · `generate.ts` · `prompt.ts`.
 - [!] **Bẫy đa model:** có 2 model trong `chunk_embeddings`. Truy vấn JOIN mà quên
@@ -103,7 +108,8 @@
 - [x] `LoginForm` gọi `POST /auth/login` thật, có trạng thái đang gửi.
 - [x] `UserMenu` — nút Đăng xuất giờ **thật sự** xóa phiên (trước là `<Link>` chỉ
       điều hướng, token vẫn nằm nguyên).
-- [x] `ChatBox` — khóa phạm vi theo `roleCode`, chỉ ADMIN đổi được.
+- [x] `ChatBox` — khóa phạm vi theo `roleCode`, chỉ ADMIN đổi được; câu hỏi gửi tới
+      `POST /search` và hiện nguồn trả về từ retrieval thật.
 - [x] `PermissionMatrix.tsx` xuống 2 cột, đọc từ hằng số `features/admin/permissions.ts`
       thay vì `mock-data.ts`; đã xóa `RoleSelect.tsx`.
 - [x] `UserTable` bỏ ô chọn vai giả — nút "Đổi vai" vô hiệu hóa kèm ghi chú, vì
@@ -129,7 +135,7 @@
 docker compose up -d db
 corepack pnpm --filter @tang-thu/server run db:check     # 27/27 đạt
 corepack pnpm --filter @tang-thu/server run db:seed      # đạt
-corepack pnpm --filter @tang-thu/server run test         # 22/22 đạt
+corepack pnpm --filter @tang-thu/server run test         # 41/41 đạt
 corepack pnpm run typecheck                              # cả hai package, đạt
 ```
 
@@ -140,26 +146,22 @@ GET  /api/health
 POST /api/auth/login          đã chạy thật
 GET  /api/auth/me             đã chạy thật
 PUT  /api/auth/password
-POST /api/search              bản tạm: 3 kết quả cứng
+POST /api/search              truy hồi lai thật
 ```
 
 ## Blocker hiện tại
 
-- **[!] Tài liệu scan không nạp được.** Đã thử một thông báo thật của trường
-  (`thong-bao-xet-quy-doi-tuong-duong-chung-chi-ngoai-ngu...pdf`): 3 trang, 3 đối tượng
-  ảnh, **0 ký tự văn bản**. Hệ thống từ chối đúng cách kèm thông báo rõ ràng, nhưng OCR
-  nằm ngoài phạm vi đề tài (mục 3 tổng quan). Cần khảo sát cả tập tài liệu ngay.
+- Không có blocker trong phạm vi truy hồi/search hiện tại.
+- Lưu ý: hai PDF thật là bản scan, parser thường trả 0 ký tự. Đợt nạp vừa rồi đã dùng
+  OCR bằng Gemini rồi mới cắt chunk và embed; nếu chạy lại worker thường khi chưa tích
+  hợp OCR vào pipeline chính, hai loại PDF scan tương tự vẫn có thể fail parse.
 
 Supabase đã bị loại khỏi thiết kế nên blocker cũ không còn.
 
 ## Thứ tự công việc tiếp theo
 
-1. **Viết `retrieval.sql.ts`** — truy vấn lai ở mục 4.1: vector + toàn văn, bộ lọc
-   phạm vi trong `WHERE`. Mọi mảnh ghép đã sẵn sàng: vector đã có, `content_tsv` đã
-   có, `lib/scope.ts` đã có. Thay bản tạm 3 kết quả cứng của `/search`.
-2. **Khảo sát tập tài liệu thật** — kiểm từng tệp có lớp văn bản không. Đã gặp một
-   thông báo của trường là bản scan thuần, không nạp được.
-3. Dựng `modules/chat/` — SSE `sources → token* → done`.
-4. `docker compose build` để kiểm hai Dockerfile chưa từng chạy.
-5. Dựng `modules/documents/` — upload → parse → chunk → lưu CSDL.
-6. Viết `retrieval.sql.ts` thật, thay bản tạm.
+1. Dựng `modules/chat/` — SSE `sources → token* → done`, nếu cần câu trả lời sinh
+   bằng LLM thay vì bản tóm tắt nguồn hiện tại của `ChatBox`.
+2. Tích hợp OCR vào pipeline ingest chính cho PDF scan.
+3. `docker compose build` để kiểm hai Dockerfile chưa từng chạy.
+4. Hoàn thiện frontend documents/admin đang còn mock.

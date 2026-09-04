@@ -23,13 +23,13 @@ const schema = z.object({
 
   // --- Gemini ----------------------------------- SIẾT KHI DÙNG (TV3) ------
   GEMINI_API_KEY: z.string().default(""),
-  GEMINI_EMBEDDING_MODEL: z.string().default("gemini-embedding-001"),
+  GEMINI_EMBEDDING_MODEL: z.string().default("gemini-embedding-2"),
   GEMINI_GENERATION_MODEL: z.string().default("gemini-flash-latest"),
   // Phải khớp vector(1536) trong schema.prisma. Đổi số này mà không viết
   // migration đổi kiểu cột là mọi lần ghi vector bị Postgres từ chối.
   //
-  // Model trả 3072 chiều đã chuẩn hóa sẵn; bản cắt ngắn thì KHÔNG, nên
-  // rag/embed.ts phải tự chuẩn hóa L2.
+  // `gemini-embedding-2` chuẩn hóa sẵn cả khi cắt ngắn; `-001` thì không, nên
+  // rag/embed.ts vẫn tự chuẩn hóa L2 để đổi model sau này không tạo bẫy.
   EMBEDDING_DIM: numeric(1536),
   // Mã hóa bất đối xứng câu hỏi/tài liệu. Về lý thuyết đúng hơn, nhưng phép thử
   // một mẫu cho thấy nó làm độ phân biệt hơi kém đi — để bật/tắt được và đưa vào

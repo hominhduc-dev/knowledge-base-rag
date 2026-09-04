@@ -21,8 +21,8 @@ import { createHash } from "node:crypto";
 
 const prisma = new PrismaClient();
 
-/** Mật khẩu dùng chung cho mọi tài khoản mồi. Ghi rõ trong README để tiện chấm. */
-const SEED_PASSWORD = process.env.SEED_PASSWORD ?? "Tangthu@123";
+/** Mật khẩu dùng chung cho cán bộ/admin mồi. Sinh viên dùng chính mã số sinh viên. */
+const STAFF_SEED_PASSWORD = process.env.STAFF_SEED_PASSWORD ?? "Tangthu@123";
 
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 /** Ước lượng thô số token tiếng Việt, đủ dùng cho dữ liệu mồi. */
@@ -47,8 +47,8 @@ const DEPARTMENTS = [
 // sinh viên CNTT và sinh viên Xây dựng, giáo vụ CNTT và giáo vụ Xây dựng.
 // Chỉ một chiều thì bộ kiểm thử có thể xanh trong khi vẫn rò rỉ chiều ngược lại.
 //
-// `code` là mã số sinh viên với VIEWER, mã cán bộ với các vai còn lại.
-// Đăng nhập được bằng mã hoặc email, cùng một mật khẩu.
+// `code` là mã số sinh viên với sinh viên, mã cán bộ với tài khoản cán bộ/admin.
+// Sinh viên đăng nhập bằng mã hoặc email, mật khẩu mặc định là chính mã số sinh viên.
 // ===========================================================================
 
 const USERS = [
@@ -379,7 +379,6 @@ async function main() {
   console.log(`  Đơn vị:      ${DEPARTMENTS.length}`);
 
   // --- Cán bộ ---------------------------------------------------------------
-  const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
   const userId = new Map<string, string>();
 
   /** Tạo người dùng rồi gắn vào đúng đơn vị với đúng vai. */
@@ -389,6 +388,7 @@ async function main() {
     fullName: string,
     role: MemberRole,
     deptCode: string,
+    password: string,
   ): Promise<void> {
     const departmentId = deptId.get(deptCode);
     if (!departmentId) throw new Error(`Không tìm thấy đơn vị ${deptCode} cho ${email}`);
@@ -398,6 +398,7 @@ async function main() {
     // khẩu" nên rất khó lần ra.
     const emailChuan = email.trim().toLowerCase();
     const codeChuan = code.trim().toUpperCase();
+    const passwordHash = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.upsert({
       where: { email: emailChuan },
@@ -415,7 +416,7 @@ async function main() {
   }
 
   for (const u of USERS) {
-    await upsertNguoiDung(u.code, u.email, u.fullName, u.role, u.dept);
+    await upsertNguoiDung(u.code, u.email, u.fullName, u.role, u.dept, STAFF_SEED_PASSWORD);
   }
   console.log(`  Cán bộ:      ${USERS.length}`);
 
@@ -430,6 +431,7 @@ async function main() {
       fullName,
       MemberRole.STUDENT,
       deptCode,
+      code,
     );
     demSinhVien.set(deptCode, (demSinhVien.get(deptCode) ?? 0) + 1);
   }
@@ -505,7 +507,7 @@ async function main() {
   });
 
   // --- Nhắc lại cặp đối chứng ----------------------------------------------
-  console.log(`\nMật khẩu chung: ${SEED_PASSWORD}\n`);
+  console.log(`\nMật khẩu sinh viên: chính mã số sinh viên. Mật khẩu cán bộ/admin: ${STAFF_SEED_PASSWORD}\n`);
   console.log("Cặp đối chứng — cùng câu hỏi, hai kết quả khác nhau:");
   console.log('  "Quy định về đồ án tốt nghiệp?"');
   console.log("  2351220193 Hồ Minh Đức (CNTT)     → phải thấy 105 tín chỉ");

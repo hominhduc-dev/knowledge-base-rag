@@ -5,10 +5,43 @@ import { Menu, Send } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/features/auth/useAuth";
-import { mockAnswer } from "@/lib/mock-data";
+import { ApiError, apiPost } from "@/lib/api-client";
+import type { Source } from "@/lib/mock-data";
 import { CitationDrawer } from "./CitationDrawer";
 import { MessageList } from "./MessageList";
 import type { ChatMessage } from "./MessageBubble";
+
+type SearchResult = {
+  items: Source[];
+  tookMs: number;
+  vectorHits: number;
+  keywordHits: number;
+};
+
+function compactExcerpt(source: Source): string {
+  const text = source.excerpt.replace(/\s+/g, " ").trim();
+  return text.length > 520 ? `${text.slice(0, 517).trim()}...` : text;
+}
+
+function buildSearchAnswer(sources: Source[], scope: string): string {
+  const top = sources.slice(0, 3);
+  const primary = top[0];
+  if (!primary) return "Không tìm thấy thông tin này trong tài liệu hiện có.";
+
+  const scopeNote = primary.unit === "Toàn trường" && scope !== "Toàn trường"
+    ? `Không tìm thấy đoạn riêng của ${scope} trong nhóm nguồn khớp nhất; nguồn dưới đây là quy định toàn trường áp dụng chung.`
+    : `Nguồn khớp nhất thuộc ${primary.unit}.`;
+  const related = top
+    .slice(1)
+    .map((source) => `${source.locator} [${source.n}]`)
+    .join("; ");
+
+  return [
+    `${scopeNote}`,
+    `${compactExcerpt(primary)} [${primary.n}]`,
+    related ? `Nguồn liên quan thêm: ${related}.` : "",
+  ].filter(Boolean).join("\n\n");
+}
 
 export function ChatBox() {
   const currentUser = useCurrentUser();
@@ -53,15 +86,27 @@ export function ChatBox() {
     setLoading(true);
     setActiveCitation(null);
 
-    await new Promise((resolve) => window.setTimeout(resolve, 700));
-    const result = mockAnswer(text);
-    if (result) {
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "answer", text: result.answer, sources: result.sources }]);
+    try {
+      const result = await apiPost<SearchResult>("/search", { query: text, topK: 3 });
+      if (result.items.length === 0) {
+        setMessages((current) => [...current, { id: crypto.randomUUID(), role: "notfound", text: `Không tìm thấy thông tin này trong tài liệu hiện có của ${effectiveScope} và tài liệu toàn trường.` }]);
+        return;
+      }
+
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "answer", text: buildSearchAnswer(result.items, effectiveScope), sources: result.items }]);
       setPanelOpen(true);
-    } else {
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "notfound", text: `Không tìm thấy thông tin này trong tài liệu hiện có của ${effectiveScope} và tài liệu toàn trường.` }]);
+    } catch (error) {
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: "error",
+          text: error instanceof ApiError ? error.message : "Không truy hồi được tài liệu. Vui lòng thử lại.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   function selectCitation(number: number) {

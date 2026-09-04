@@ -9,3 +9,13 @@ dist/
 
 # San pham build cua TypeScript, khong theo doi
 *.tsbuildinfo
+
+# Tep goc nguoi dung tai len — du lieu luc chay, khong phai ma nguon.
+# Commit vao day la dua tai lieu noi bo cua truong vao lich su Git vinh vien,
+# trong khi san pham ban giao A yeu cau repo cong khai.
+server/uploads/
+uploads/
+
+# Cau hinh may ca nhan cua trinh soan thao
+.vscode/
+.idea/

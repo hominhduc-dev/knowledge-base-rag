@@ -32,7 +32,7 @@ Các trợ lý AI phổ thông không giải được bài toán này: chúng kh
 | Máy chủ ứng dụng | Express 5 · TypeScript · REST + SSE |
 | ORM | Prisma `6.16.3` — truy vấn truy hồi dùng raw SQL |
 | Cơ sở dữ liệu | PostgreSQL 16 + pgvector (Supabase) |
-| Nhúng vector và sinh câu trả lời | Gemini — `gemini-embedding-001`, 1536 chiều |
+| Nhúng vector và sinh câu trả lời | Gemini — `gemini-embedding-2`, 1536 chiều |
 | Đọc tài liệu | `unpdf` · `mammoth` |
 | Hàng đợi | Bảng `jobs` trong Postgres, không dùng Redis |
 | Triển khai | Vercel (giao diện) · Hostinger VPS + Docker (máy chủ) |
@@ -77,7 +77,8 @@ Kiểm 13 điểm: đủ 11 bảng, cột `tsv` là cột sinh tự động, ch�
 
 ### Tài khoản mẫu
 
-Mật khẩu chung `Tangthu@123`. Đăng nhập bằng **mã hoặc email**.
+Cán bộ/admin dùng mật khẩu `Tangthu@123`. Sinh viên dùng mật khẩu là chính mã số
+sinh viên. Đăng nhập bằng **mã hoặc email**.
 
 | Mã | Vai | Đơn vị |
 |---|---|---|
@@ -86,7 +87,8 @@ Mật khẩu chung `Tangthu@123`. Đăng nhập bằng **mã hoặc email**.
 | `CB0231` | Giảng viên | Khoa Công nghệ Thông tin |
 | `CB0006` | Quản trị viên | Phòng Đào tạo |
 
-Sinh viên do `prisma/seed.ts` nạp, đăng nhập bằng mã số sinh viên.
+Sinh viên do `prisma/seed.ts` nạp, đăng nhập bằng mã số sinh viên; mật khẩu mặc
+định trùng mã số sinh viên.
 
 ### Thử cách ly phạm vi
 

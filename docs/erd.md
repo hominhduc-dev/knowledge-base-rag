@@ -102,7 +102,7 @@ erDiagram
         bigint id PK
         uuid chunk_id FK
         vector_1536 embedding
-        varchar_64 model "gemini-embedding-001"
+        varchar_64 model "gemini-embedding-2"
     }
 
     ingest_jobs {
@@ -249,8 +249,9 @@ vẫn dưới 2 GB, chỉ là biên hẹp lại. **Cần sửa mục 3.2 và 9.1
 
 Hai hệ quả bắt buộc:
 
-- **Phải tự chuẩn hóa L2 trong `rag/embed.ts`.** Model trả 3072 chiều đã chuẩn hóa sẵn;
-  bản cắt ngắn (cả 1536 lẫn 768) thì **không**.
+- **Vẫn tự chuẩn hóa L2 trong `rag/embed.ts`.** `gemini-embedding-2` đã chuẩn hóa sẵn
+  cả khi cắt ngắn, nhưng `gemini-embedding-001` thì không. Chuẩn hóa lại một vector đã
+  chuẩn là vô hại, còn bỏ bước này sẽ tạo bẫy nếu sau này đổi model.
 - **`maintenance_work_mem` phải ≥ 512 MB.** Mặc định 64 MB làm việc dựng chỉ mục HNSW
   500 MB tràn ra đĩa và chậm hàng chục lần. Đã đặt trong `docker-compose.yml`.
 

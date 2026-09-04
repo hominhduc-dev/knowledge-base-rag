@@ -155,17 +155,17 @@ describe("Cách ly phạm vi giữa các đơn vị", () => {
     // Nếu `scopeSql` vô tình trả TRUE cho sinh viên thì bốn test trên vẫn có thể
     // xanh khi dữ liệu thưa. Phép so sánh này bắt đúng trường hợp đó.
     const coLoc = await timKiem(svCNTT, "điều kiện nhận đồ án tốt nghiệp tín chỉ");
-    const khongLoc = await prisma.$queryRaw<ChunkRow[]>`
-      SELECT c."id", c."content", c."department_id"
+    const khongLoc = await prisma.$queryRaw<{ n: bigint }[]>`
+      SELECT count(*) AS n
       FROM "chunks" c
       WHERE c."content_tsv" @@ replace(
         plainto_tsquery('simple', ${"điều kiện nhận đồ án tốt nghiệp tín chỉ"})::text, '&', '|')::tsquery
-      LIMIT 20
     `;
 
+    const soKhongLoc = Number(khongLoc[0]?.n ?? 0);
     assert.ok(
-      khongLoc.length > coLoc.length,
-      `bộ lọc phạm vi không loại được gì (${khongLoc.length} so với ${coLoc.length}) — ` +
+      soKhongLoc > coLoc.length,
+      `bộ lọc phạm vi không loại được gì (${soKhongLoc} so với ${coLoc.length}) — ` +
         "hoặc dữ liệu mồi thiếu cặp đối chứng, hoặc scopeSql đang trả TRUE",
     );
   });

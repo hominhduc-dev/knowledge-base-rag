@@ -246,7 +246,7 @@ Trích từ danh sách điểm danh lớp *Lập trình mạng (NEP30103 - 23CT3
 > **Rủi ro riêng tư.** 57 người này là người thật, trong khi sản phẩm bàn giao A yêu cầu
 > repo công khai. Hai điều đó xung đột — cần chốt ẩn danh hóa hay không trước khi công khai.
 
-Bốn tài khoản tiện dùng khi kiểm thử, mật khẩu chung `Tangthu@123`:
+Bốn tài khoản sinh viên tiện dùng khi kiểm thử; mật khẩu mặc định trùng mã số sinh viên:
 
 | Mã | Họ tên | Đơn vị |
 |---|---|---|

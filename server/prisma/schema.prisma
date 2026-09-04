@@ -255,7 +255,7 @@ model ChunkEmbedding {
   /// Prisma chưa hỗ trợ kiểu này — mọi thao tác đọc/ghi dùng $queryRaw.
   embedding Unsupported("vector(1536)")
 
-  model     String   @db.VarChar(64) // gemini-embedding-001
+  model     String   @db.VarChar(64) // gemini-embedding-2
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   chunk Chunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)

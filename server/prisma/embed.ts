@@ -13,7 +13,7 @@ import { nhungTaiLieu } from "../src/rag/embed.js";
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
-  const model = process.env.GEMINI_EMBEDDING_MODEL ?? "gemini-embedding-001";
+  const model = process.env.GEMINI_EMBEDDING_MODEL ?? "gemini-embedding-2";
   console.log(`\nNạp vector nhúng · model ${model} · ${process.env.EMBEDDING_DIM ?? 1536} chiều\n`);
 
   const taiLieu = await prisma.document.findMany({
