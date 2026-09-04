@@ -316,7 +316,7 @@ event: token
 data: {"text":"Sinh viên được xét tốt nghiệp khi tích lũy đủ"}
 
 event: done
-data: {"messageId":"...","conversationId":"...","latencyMs":2840,"cited":[1,2]}
+data: {"messageId":"...","conversationId":"...","latencyMs":2840,"cited":[1,2],"text":"Sinh viên được xét tốt nghiệp khi... [1][2]"}
 
 event: error
 data: {"code":"UPSTREAM_ERROR","message":"Dịch vụ mô hình tạm thời không phản hồi"}
@@ -336,6 +336,18 @@ lời. Giao diện nên hiện đủ `sources` trong lúc chữ đang chảy r�
 
 Số hiệu trong `cited` giữ nguyên đánh số của `sources`, **không** đánh lại từ 1 — marker
 trong phần chữ đã trỏ theo đánh số cũ.
+
+**`done.text` là câu trả lời chung cuộc**, đúng chuỗi được ghi vào `messages.content`.
+Các sự kiện `token` phát bản **thô** của mô hình, vì phải phát ngay khi nhận được thì chữ
+mới chảy; ràng buộc trích dẫn chỉ chạy được sau khi gom đủ, và nó sửa văn bản theo hai
+cách — gỡ marker mô hình bịa ra, hoặc **thay cả câu trả lời bằng câu từ chối** khi không
+có trích dẫn hợp lệ nào. Giao diện **phải** thay phần chữ bằng `done.text`; giữ bản thô
+thì màn hình và lịch sử hội thoại nói hai chuyện khác nhau, và trường hợp tệ nhất là
+người dùng đọc một câu trả lời tự tin trong khi CSDL ghi "không tìm thấy".
+
+Trường này gửi vô điều kiện, kể cả khi trùng hệt bản đã phát. Chỉ gửi khi lệch sẽ tiết
+kiệm được vài trăm byte, đổi lại là thêm một điều kiện có thể sai đúng ở chỗ không được
+phép sai.
 
 > **Khác v1:** v1 dùng năm sự kiện với `citation` gửi từng cái **sau** phần chữ, và một
 > sự kiện `no_source` riêng. v2 gộp mọi trích dẫn vào một sự kiện `sources` gửi **trước**,

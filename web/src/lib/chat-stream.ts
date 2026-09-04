@@ -29,15 +29,20 @@ export type ChatSource = {
  * lúc sinh chữ nên nó mang đủ `topK` đoạn truy hồi được; `cited` là thứ duy
  * nhất cho biết câu trả lời rốt cuộc dựa vào cái nào.
  *
- * `null` nghĩa là máy chủ KHÔNG gửi trường này — khác hẳn `[]` là "đã gửi, và
- * không trích gì". Gộp hai trường hợp lại sẽ khiến một máy chủ cũ làm panel
- * nguồn trống trơn.
+ * `text` là câu trả lời chung cuộc, đúng chuỗi máy chủ ghi vào CSDL. Các sự
+ * kiện `token` là bản THÔ của mô hình; ràng buộc trích dẫn chỉ chạy sau khi gom
+ * đủ, và nó có thể gỡ marker bịa hoặc thay cả câu trả lời bằng câu từ chối.
+ *
+ * `null` ở cả hai trường nghĩa là máy chủ KHÔNG gửi — khác hẳn `[]` hay `""` là
+ * "đã gửi, và rỗng". Gộp hai trường hợp lại sẽ khiến một máy chủ cũ xóa sạch
+ * panel nguồn và câu trả lời.
  */
 export type DoneInfo = {
   messageId: string;
   conversationId: string;
   latencyMs: number;
   cited: number[] | null;
+  text: string | null;
 };
 
 export type ChatHandlers = {
@@ -124,6 +129,7 @@ export async function streamChat(
                 conversationId: thong.conversationId ?? "",
                 latencyMs: thong.latencyMs ?? 0,
                 cited: Array.isArray(thong.cited) ? thong.cited : null,
+                text: typeof thong.text === "string" ? thong.text : null,
               });
             }
             break;

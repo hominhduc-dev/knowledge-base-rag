@@ -33,6 +33,19 @@ export type ChatEvent =
        * vì `message_citations` chỉ lưu bấy nhiêu.
        */
       cited: number[];
+      /**
+       * Câu trả lời CHUNG CUỘC — đúng chuỗi được ghi vào `messages.content`.
+       *
+       * Các sự kiện `token` phát ra bản THÔ của mô hình, vì phải phát ngay khi
+       * nhận được thì chữ mới chảy. Ràng buộc trích dẫn chỉ chạy được sau khi
+       * gom đủ, và nó sửa văn bản theo hai cách: gỡ marker mô hình bịa ra, hoặc
+       * thay cả câu trả lời bằng câu từ chối khi không có trích dẫn hợp lệ nào.
+       *
+       * Không gửi trường này thì màn hình giữ bản thô còn CSDL giữ bản đã sửa —
+       * tệ nhất là người dùng đọc một câu trả lời tự tin trong khi lịch sử hội
+       * thoại ghi "không tìm thấy". Giao diện phải thay bằng chuỗi này.
+       */
+      text: string;
     }
   | { type: "error"; code: string; message: string };
 
@@ -71,7 +84,14 @@ export async function* hoi(
       Date.now() - batDau,
     );
     yield { type: "token", text: CAU_TU_CHOI };
-    yield { type: "done", messageId, conversationId, latencyMs: Date.now() - batDau, cited: [] };
+    yield {
+      type: "done",
+      messageId,
+      conversationId,
+      latencyMs: Date.now() - batDau,
+      cited: [],
+      text: CAU_TU_CHOI,
+    };
     return;
   }
 
@@ -133,6 +153,11 @@ export async function* hoi(
     conversationId,
     latencyMs: Date.now() - batDau,
     cited: daTrich.map((s) => s.n),
+    // Gửi vô điều kiện, kể cả khi không có gì thay đổi. So sánh với bản thô rồi
+    // chỉ gửi khi lệch sẽ tiết kiệm được vài trăm byte, đổi lại là một điều kiện
+    // nữa có thể sai — mà đúng chỗ này thì sai nghĩa là màn hình và CSDL nói hai
+    // chuyện khác nhau.
+    text: cuoiCung,
   };
 }
 

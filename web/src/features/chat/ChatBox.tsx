@@ -98,13 +98,29 @@ export function ChatBox() {
             // vì `message_citations` chỉ lưu bấy nhiêu. Ba con số cho cùng một
             // câu trả lời.
             //
-            // `null` là máy chủ không gửi `cited` — giữ nguyên còn hơn xóa sạch.
-            const cited = info.cited;
-            if (cited === null) return;
+            // Thay phần chữ bằng bản chung cuộc.
+            //
+            // Các sự kiện `token` là bản THÔ của mô hình. Ràng buộc trích dẫn
+            // chỉ chạy được sau khi gom đủ, và nó sửa văn bản theo hai cách: gỡ
+            // marker mô hình bịa ra, hoặc thay cả câu trả lời bằng câu từ chối
+            // khi không có trích dẫn hợp lệ nào. Không thay ở đây thì màn hình
+            // giữ bản thô còn CSDL giữ bản đã sửa — người dùng đọc một câu trả
+            // lời tự tin trong khi lịch sử hội thoại ghi "không tìm thấy".
+            //
+            // Cả hai hiệu chỉnh gộp vào MỘT lần cập nhật: tách ra thành hai sẽ
+            // vẽ lại hai lần và người dùng thấy chữ nháy.
+            //
+            // `null` là máy chủ không gửi trường đó — giữ nguyên còn hơn xóa.
+            const { cited, text } = info;
+            if (cited === null && text === null) return;
             setMessages((current) =>
               current.map((m) =>
                 m.id === answerId && m.role === "answer"
-                  ? { ...m, sources: m.sources.filter((s) => cited.includes(s.n)) }
+                  ? {
+                      ...m,
+                      text: text ?? m.text,
+                      sources: cited === null ? m.sources : m.sources.filter((s) => cited.includes(s.n)),
+                    }
                   : m,
               ),
             );
