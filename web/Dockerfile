@@ -3,6 +3,11 @@
 #   docker build -f web/Dockerfile .
 # ---------------------------------------------------------------------------
 FROM node:22-slim AS base
+# CI=true: không có TTY trong lúc build, mà pnpm mặc định HỎI trước khi dọn
+# node_modules — bước `install --prod` vì thế dừng với
+# ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY. Đây là biến chính thông báo lỗi
+# của pnpm chỉ ra.
+ENV CI=true
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
 RUN corepack enable
 WORKDIR /app

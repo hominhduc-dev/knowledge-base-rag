@@ -10,6 +10,16 @@ import { logger } from "../lib/logger.js";
 
 const GOC = "https://generativelanguage.googleapis.com/v1beta/models";
 
+const SO_LAN_THU = 3;
+
+const nghi = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Lùi theo cấp số nhân có nhiễu — cùng lý do đã ghi trong `embed.ts`. */
+function lui(lan: number): Promise<unknown> {
+  const co = 400 * 2 ** (lan - 1);
+  return nghi(co + Math.random() * co);
+}
+
 export type GenerateOptions = {
   systemPrompt: string;
   userPrompt: string;
@@ -112,32 +122,63 @@ export async function* sinhCauTraLoi(options: GenerateOptions): AsyncGenerator<s
   }
 
   const url = `${GOC}/${env.GEMINI_GENERATION_MODEL}:streamGenerateContent?alt=sse`;
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: options.systemPrompt }] },
+    contents: [{ role: "user", parts: [{ text: options.userPrompt }] }],
+    generationConfig: {
+      temperature: 0.2,
+      topP: 0.9,
+      maxOutputTokens: env.GENERATION_MAX_TOKENS,
+    },
+  });
 
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-      signal: options.signal ?? null,
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: options.systemPrompt }] },
-        contents: [{ role: "user", parts: [{ text: options.userPrompt }] }],
-        generationConfig: {
-          temperature: 0.2,
-          topP: 0.9,
-          maxOutputTokens: env.GENERATION_MAX_TOKENS,
-        },
-      }),
-    });
-  } catch (error) {
-    if ((error as Error).name === "AbortError") return; // người dùng đóng tab
-    throw upstreamError(`Không gọi được dịch vụ mô hình: ${(error as Error).message}`);
+  // ────────────────────────────────────────────────────────────────────────
+  // THỬ LẠI CHỈ Ở BƯỚC MỞ LUỒNG, KHÔNG BAO GIỜ GIỮA CHỪNG.
+  //
+  // Gặp thật ngay lần chạy đầu: Gemini trả `503 model overloaded`, và lần gọi
+  // lại 1,5 giây sau đã 200. Không có bước này thì mỗi lần dịch vụ bận là người
+  // dùng nhận thông báo lỗi cho một sự cố tự khỏi sau một giây.
+  //
+  // Nhưng chỉ thử lại KHI CHƯA PHÁT MẢNH NÀO. Một khi token đầu tiên đã ra tới
+  // trình duyệt thì gọi lại là sinh câu trả lời thứ hai nối vào giữa câu thứ
+  // nhất — văn bản lai tạp mà không có lỗi nào báo. Lỗi giữa luồng phải để
+  // nguyên cho chỗ gọi xử lý.
+  // ────────────────────────────────────────────────────────────────────────
+  let loiCuoi = "";
+
+  for (let lan = 1; lan <= SO_LAN_THU; lan += 1) {
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+        signal: options.signal ?? null,
+        body,
+      });
+    } catch (error) {
+      if ((error as Error).name === "AbortError") return; // người dùng đóng tab
+      loiCuoi = `lỗi mạng: ${(error as Error).message}`;
+      await lui(lan);
+      continue;
+    }
+
+    if (res.ok && res.body) {
+      yield* tachLuong(res.body);
+      return;
+    }
+
+    const chiTiet = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 200);
+
+    // 429 quá hạn mức và 5xx quá tải là tạm thời. 4xx còn lại (khóa sai, prompt
+    // quá dài, nội dung bị chặn) thì thử lại bao nhiêu lần cũng cùng kết quả.
+    if (res.status !== 429 && res.status < 500) {
+      throw upstreamError(`Dịch vụ mô hình từ chối (HTTP ${res.status}): ${chiTiet}`);
+    }
+
+    loiCuoi = `HTTP ${res.status}: ${chiTiet}`;
+    logger.warn(`Mở luồng thất bại lần ${lan}/${SO_LAN_THU} — ${loiCuoi}`);
+    await lui(lan);
   }
 
-  if (!res.ok || !res.body) {
-    const chiTiet = (await res.text().catch(() => "")).slice(0, 300);
-    throw upstreamError(`Dịch vụ mô hình trả lỗi (HTTP ${res.status}): ${chiTiet}`);
-  }
-
-  yield* tachLuong(res.body);
+  throw upstreamError(`Dịch vụ mô hình không phản hồi sau ${SO_LAN_THU} lần. ${loiCuoi}`);
 }
