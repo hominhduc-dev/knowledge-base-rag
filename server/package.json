@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "eval": "tsx --env-file=.env src/eval/run-eval.ts",
     "typecheck": "tsc -p tsconfig.check.json",
     "netlab:tcp": "tsx src/netlab/tcp-server.ts",
     "netlab:client": "tsx src/netlab/tcp-client.ts",

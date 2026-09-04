@@ -468,28 +468,45 @@ async function main() {
       create: { ...chung, fileHash },
     });
 
-    // Xóa rồi ghi lại toàn bộ đoạn văn: nội dung seed có thể đổi giữa các lần
-    // chạy, mà `chunk_index` thì không phải khóa ổn định để upsert theo.
-    await prisma.chunk.deleteMany({ where: { documentId: document.id } });
-
+    // UPSERT theo `(document_id, chunk_index)`, KHÔNG xóa rồi tạo lại.
+    //
+    // ────────────────────────────────────────────────────────────────────────
+    // VÌ SAO ĐIỀU NÀY QUAN TRỌNG, chứ không chỉ là chuyện gọn gàng.
+    //
+    // `eval_gold_chunks.chunk_id` có `ON DELETE CASCADE`. Xóa đoạn văn là xóa
+    // luôn mọi liên kết câu hỏi vàng ↔ đoạn đáp án, KHÔNG BÁO GÌ. Nghĩa là mỗi
+    // lần chạy lại `db:seed` sẽ thổi bay công gán bộ câu hỏi vàng, và người chạy
+    // chỉ phát hiện khi recall đột ngột về 0.
+    //
+    // `chunk_index` LÀ khóa ổn định — lược đồ có sẵn `@@unique([documentId,
+    // chunkIndex])`. Upsert theo nó giữ nguyên `id` của đoạn văn qua các lần
+    // chạy, nên liên kết câu hỏi vàng sống sót.
+    // ────────────────────────────────────────────────────────────────────────
     for (const [i, c] of doc.chunks.entries()) {
-      await prisma.chunk.create({
-        data: {
-          documentId: document.id,
-          chunkIndex: i,
-          content: c.text,
-          contentHash: sha256(c.text),
-          headingPath: c.articleRef,
-          pageFrom: c.page,
-          pageTo: c.page,
-          tokenCount: estimateTokens(c.text),
-          // LẶP từ documents — cho phép lọc phạm vi TRƯỚC khi xếp hạng.
-          departmentId,
-          visibility: 1,
-        },
+      const noiDung = {
+        content: c.text,
+        contentHash: sha256(c.text),
+        headingPath: c.articleRef,
+        pageFrom: c.page,
+        pageTo: c.page,
+        tokenCount: estimateTokens(c.text),
+        // LẶP từ documents — cho phép lọc phạm vi TRƯỚC khi xếp hạng.
+        departmentId,
+        visibility: 1,
+      };
+      await prisma.chunk.upsert({
+        where: { documentId_chunkIndex: { documentId: document.id, chunkIndex: i } },
+        update: noiDung,
+        create: { documentId: document.id, chunkIndex: i, ...noiDung },
       });
       soDoan++;
     }
+
+    // Lần seed này có ÍT đoạn hơn lần trước thì dọn phần thừa ở đuôi. Chỉ những
+    // đoạn thật sự không còn tồn tại mới bị xóa.
+    await prisma.chunk.deleteMany({
+      where: { documentId: document.id, chunkIndex: { gte: doc.chunks.length } },
+    });
   }
   console.log(`  Tài liệu:    ${DOCUMENTS.length}`);
   console.log(`  Đoạn văn:    ${soDoan}`);

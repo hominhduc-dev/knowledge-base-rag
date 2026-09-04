@@ -89,7 +89,9 @@
 - [!] **Bẫy đa model:** có 2 model trong `chunk_embeddings`. Truy vấn JOIN mà quên
       `AND e.model = ...` sẽ trả mỗi đoạn HAI lần, không báo lỗi. Dùng hằng số
       `MODEL_HIEN_TAI` trong `rag/embed.ts`. `db:check` đã cảnh báo việc này.
-- [ ] `eval/` — bộ 30 câu hỏi vàng, 9 thí nghiệm.
+- [x] `eval/` — 31 câu hỏi vàng, **10 dòng `eval_runs`**, vượt tiêu chí số 4.
+- [x] `seed.ts` upsert theo `(document_id, chunk_index)` — id đoạn văn nay ỔN ĐỊNH,
+      bộ câu hỏi vàng sống sót qua các lần seed lại.
 
 ## Module netlab — môn Lập trình mạng
 
