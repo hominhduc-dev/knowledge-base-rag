@@ -88,6 +88,26 @@ export function ChatBox() {
           onDone(info) {
             // Giữ lại để lượt hỏi sau nối vào cùng một hội thoại.
             setConversationId(info.conversationId);
+
+            // Thu panel nguồn về đúng những đoạn được trích.
+            //
+            // Trong lúc chữ đang chảy, panel cố ý hiện cả `topK` đoạn truy hồi
+            // được — người dùng thấy hệ thống đang dựa vào đâu trước khi đọc nó
+            // nói gì. Nhưng khi xong mà vẫn để nguyên thì câu trả lời trích [1]
+            // [2] còn panel treo mười thẻ, và tải lại hội thoại lại chỉ còn hai
+            // vì `message_citations` chỉ lưu bấy nhiêu. Ba con số cho cùng một
+            // câu trả lời.
+            //
+            // `null` là máy chủ không gửi `cited` — giữ nguyên còn hơn xóa sạch.
+            const cited = info.cited;
+            if (cited === null) return;
+            setMessages((current) =>
+              current.map((m) =>
+                m.id === answerId && m.role === "answer"
+                  ? { ...m, sources: m.sources.filter((s) => cited.includes(s.n)) }
+                  : m,
+              ),
+            );
           },
           onError(message) {
             setMessages((current) => [

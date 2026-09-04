@@ -316,7 +316,7 @@ event: token
 data: {"text":"Sinh viên được xét tốt nghiệp khi tích lũy đủ"}
 
 event: done
-data: {"messageId":"...","conversationId":"...","latencyMs":2840}
+data: {"messageId":"...","conversationId":"...","latencyMs":2840,"cited":[1,2]}
 
 event: error
 data: {"code":"UPSTREAM_ERROR","message":"Dịch vụ mô hình tạm thời không phản hồi"}
@@ -325,6 +325,17 @@ data: {"code":"UPSTREAM_ERROR","message":"Dịch vụ mô hình tạm thời kh�
 **`sources` gửi TRƯỚC token đầu tiên.** Giao diện dựng panel nguồn ngay lúc đó, nên người
 dùng thấy hệ thống dựa vào tài liệu nào **trước cả khi** đọc câu trả lời — chi tiết nhỏ
 nhưng củng cố trực tiếp thông điệp minh bạch của sản phẩm.
+
+**`done.cited` là số hiệu các nguồn thực sự được trích**, tập con của `sources`. Nó tồn
+tại chính vì `sources` phải đi trước: lúc đó chưa ai biết mô hình sẽ dùng đoạn nào, nên
+sự kiện ấy mang đủ `RETRIEVAL_TOP_K` đoạn truy hồi được. Không có `cited`, giao diện
+đứng mãi ở mười thẻ trong khi câu trả lời chỉ nhắc hai — và tải lại hội thoại thì còn
+hai, vì `message_citations` chỉ lưu bấy nhiêu. Ba con số khác nhau cho cùng một câu trả
+lời. Giao diện nên hiện đủ `sources` trong lúc chữ đang chảy rồi thu về `cited` khi
+`done` tới.
+
+Số hiệu trong `cited` giữ nguyên đánh số của `sources`, **không** đánh lại từ 1 — marker
+trong phần chữ đã trỏ theo đánh số cũ.
 
 > **Khác v1:** v1 dùng năm sự kiện với `citation` gửi từng cái **sau** phần chữ, và một
 > sự kiện `no_source` riêng. v2 gộp mọi trích dẫn vào một sự kiện `sources` gửi **trước**,

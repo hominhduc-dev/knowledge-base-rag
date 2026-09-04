@@ -22,10 +22,28 @@ export type ChatSource = {
   score: number;
 };
 
+/**
+ * Thân sự kiện `done`.
+ *
+ * `cited` là số hiệu các nguồn thực sự được trích. Sự kiện `sources` đi trước
+ * lúc sinh chữ nên nó mang đủ `topK` đoạn truy hồi được; `cited` là thứ duy
+ * nhất cho biết câu trả lời rốt cuộc dựa vào cái nào.
+ *
+ * `null` nghĩa là máy chủ KHÔNG gửi trường này — khác hẳn `[]` là "đã gửi, và
+ * không trích gì". Gộp hai trường hợp lại sẽ khiến một máy chủ cũ làm panel
+ * nguồn trống trơn.
+ */
+export type DoneInfo = {
+  messageId: string;
+  conversationId: string;
+  latencyMs: number;
+  cited: number[] | null;
+};
+
 export type ChatHandlers = {
   onSources: (items: ChatSource[]) => void;
   onToken: (text: string) => void;
-  onDone: (info: { messageId: string; conversationId: string; latencyMs: number }) => void;
+  onDone: (info: DoneInfo) => void;
   onError: (message: string) => void;
 };
 
@@ -99,7 +117,15 @@ export async function streamChat(
             handlers.onToken((duLieu as { text: string }).text ?? "");
             break;
           case "done":
-            handlers.onDone(duLieu as { messageId: string; conversationId: string; latencyMs: number });
+            {
+              const thong = duLieu as Partial<DoneInfo>;
+              handlers.onDone({
+                messageId: thong.messageId ?? "",
+                conversationId: thong.conversationId ?? "",
+                latencyMs: thong.latencyMs ?? 0,
+                cited: Array.isArray(thong.cited) ? thong.cited : null,
+              });
+            }
             break;
           case "error":
             handlers.onError((duLieu as { message: string }).message);

@@ -19,7 +19,21 @@ import type { AskInput } from "./chat.schema.js";
 export type ChatEvent =
   | { type: "sources"; items: Source[] }
   | { type: "token"; text: string }
-  | { type: "done"; messageId: string; conversationId: string; latencyMs: number }
+  | {
+      type: "done";
+      messageId: string;
+      conversationId: string;
+      latencyMs: number;
+      /**
+       * Số hiệu các nguồn THỰC SỰ được trích, tập con của `sources`.
+       *
+       * Có mặt vì `sources` phải đi trước lúc sinh chữ, khi chưa ai biết mô hình
+       * sẽ dùng đoạn nào — nếu không báo lại, giao diện đứng mãi ở đủ `topK` thẻ
+       * trong khi câu trả lời chỉ nhắc hai cái, và tải lại hội thoại thì còn hai
+       * vì `message_citations` chỉ lưu bấy nhiêu.
+       */
+      cited: number[];
+    }
   | { type: "error"; code: string; message: string };
 
 /**
@@ -57,7 +71,7 @@ export async function* hoi(
       Date.now() - batDau,
     );
     yield { type: "token", text: CAU_TU_CHOI };
-    yield { type: "done", messageId, conversationId, latencyMs: Date.now() - batDau };
+    yield { type: "done", messageId, conversationId, latencyMs: Date.now() - batDau, cited: [] };
     return;
   }
 
@@ -110,7 +124,16 @@ export async function* hoi(
     Date.now() - batDau,
   );
 
-  yield { type: "done", messageId, conversationId, latencyMs: Date.now() - batDau };
+  // `daTrich` chứ không phải `kiem.daDung`: hai cái luôn khớp nhau (marker ngoài
+  // dải đã bị `locMarker` gỡ trước đó), nhưng lấy từ danh sách đã lọc thì không
+  // có đường nào trả về một số hiệu không có thẻ nguồn tương ứng.
+  yield {
+    type: "done",
+    messageId,
+    conversationId,
+    latencyMs: Date.now() - batDau,
+    cited: daTrich.map((s) => s.n),
+  };
 }
 
 // ===========================================================================

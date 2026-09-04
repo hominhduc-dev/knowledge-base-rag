@@ -58,6 +58,7 @@ export async function ask(req: Request, res: Response): Promise<void> {
             messageId: suKien.messageId,
             conversationId: suKien.conversationId,
             latencyMs: suKien.latencyMs,
+            cited: suKien.cited,
           });
           break;
         case "error":
