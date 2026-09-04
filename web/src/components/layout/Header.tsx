@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AdminNavLink } from "./AdminNavLink";
 import { UserMenu } from "./UserMenu";
 
 type HeaderProps = { section: "documents" | "admin" };
@@ -15,7 +16,7 @@ export function Header({ section }: HeaderProps) {
         <nav className="hidden items-center gap-1 sm:flex" aria-label="Điều hướng chính">
           <Link href="/chat" className="rounded-[8px] px-3 py-2 text-sm text-secondary no-underline hover:bg-sunken">Hỏi đáp</Link>
           <Link href="/documents" className={section === "documents" ? "rounded-[8px] bg-sunken px-3 py-2 text-sm font-medium no-underline" : "rounded-[8px] px-3 py-2 text-sm text-secondary no-underline hover:bg-sunken"}>Tài liệu</Link>
-          <Link href="/admin/departments" className={section === "admin" ? "rounded-[8px] bg-sunken px-3 py-2 text-sm font-medium no-underline" : "rounded-[8px] px-3 py-2 text-sm text-secondary no-underline hover:bg-sunken"}>Quản trị</Link>
+          <AdminNavLink active={section === "admin"} />
         </nav>
         <div className="ml-auto"><UserMenu compact /></div>
       </div>

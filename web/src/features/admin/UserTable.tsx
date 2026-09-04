@@ -1,67 +1,213 @@
 "use client";
 
-import { users } from "@/lib/mock-data";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { useCurrentUser } from "@/features/auth/useAuth";
+import { ApiError } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
+import { batTat, danhSachNguoiDung, doiVai, nhanVai, type UserItem } from "./api";
 
 /**
  * Danh sách người dùng.
  *
- * CHƯA NỐI API. `GET /users` và `PATCH /users/:id` chưa được viết, nên bảng này
- * vẫn đọc dữ liệu giả và nút đổi vai bị vô hiệu hóa.
+ * Cột "Vai" là một cột theo TỪNG ĐƠN VỊ, không phải một giá trị của người dùng:
+ * `department_members` giữ vai riêng cho mỗi tư cách thành viên, nên một người
+ * có thể là quản trị ở phòng mình và sinh viên ở khoa khác. Đó là lý do bấm đổi
+ * vai lại gọi `POST /departments/:id/members` chứ không phải `PATCH /users/:id`.
  *
- * Trước đây cột "Vai" là một ô chọn bốn giá trị (`RoleSelect`) và bấm "Đổi vai"
- * thì đổi được ngay trên màn hình. Nó KHÔNG gửi gì lên máy chủ — chỉ sửa state
- * cục bộ rồi mất khi tải lại trang. Một điều khiển trông như chạy được nhưng
- * không làm gì là thứ khiến người kiểm thử tưởng tính năng đã xong; thà vô hiệu
- * hóa và nói rõ còn hơn.
- *
- * Khi `PATCH /users/:id` xong: bỏ `disabled`, gọi API, và vì chỉ còn hai vai nên
- * dùng công tắc hai trạng thái, không cần ô chọn.
+ * Người không thuộc đơn vị nào chỉ đọc được tài liệu toàn trường — hợp lệ, hiển
+ * thị đúng như vậy chứ không coi là dữ liệu hỏng.
  */
 export function UserTable() {
+  const me = useCurrentUser();
+  const [items, setItems] = useState<UserItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [query, setQuery] = useState("");
+  const [dangTai, setDangTai] = useState(true);
+  const [loi, setLoi] = useState<string | null>(null);
+  /** Id đang có yêu cầu ghi dở — khóa nút để không bấm hai lần. */
+  const [dangGhi, setDangGhi] = useState<string | null>(null);
+
+  // Đánh số lượt gọi: phản hồi của lần gõ trước có thể về SAU lần gõ sau và ghi
+  // đè kết quả mới bằng kết quả cũ.
+  const luotGoi = useRef(0);
+
+  const nap = useCallback(async () => {
+    const luot = ++luotGoi.current;
+    setDangTai(true);
+    try {
+      const kq = await danhSachNguoiDung({ q: query.trim() || undefined });
+      if (luot !== luotGoi.current) return;
+      setItems(kq.items);
+      setTotal(kq.total);
+      setLoi(null);
+    } catch (e: unknown) {
+      if (luot !== luotGoi.current) return;
+      setLoi(e instanceof ApiError ? e.message : "Không tải được danh sách người dùng.");
+    } finally {
+      if (luot === luotGoi.current) setDangTai(false);
+    }
+  }, [query]);
+
+  useEffect(() => {
+    const t = setTimeout(nap, query ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [nap, query]);
+
+  async function xuLy(id: string, viec: () => Promise<unknown>) {
+    setDangGhi(id);
+    try {
+      await viec();
+      await nap();
+      setLoi(null);
+    } catch (e: unknown) {
+      setLoi(e instanceof ApiError ? e.message : "Thao tác thất bại.");
+    } finally {
+      setDangGhi(null);
+    }
+  }
+
   return (
     <div className="mt-7">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Tìm theo tên, email hoặc mã số"
+          aria-label="Tìm người dùng"
+          className="max-w-[320px]"
+        />
+        <span className="font-mono text-[13px] text-muted">
+          {dangTai ? "Đang tải…" : `${total} người dùng`}
+        </span>
+      </div>
+
+      {loi && (
+        <p
+          role="alert"
+          className="mb-4 rounded-[8px] border border-danger/30 bg-danger/5 px-4 py-3 text-sm leading-[22px] text-danger"
+        >
+          {loi}
+        </p>
+      )}
+
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[820px] border-collapse">
+        <table className="w-full min-w-[900px] border-collapse">
           <thead>
             <tr className="border-b border-border-strong text-left text-[13px] leading-5 text-muted">
-              <th scope="col" className="pb-2.5 pr-3 font-medium">Họ tên</th>
-              <th scope="col" className="px-3 pb-2.5 font-medium">Email</th>
-              <th scope="col" className="px-3 pb-2.5 font-medium">Vai</th>
-              <th scope="col" className="px-3 pb-2.5 font-medium">Phạm vi</th>
-              <th scope="col" className="pb-2.5 pl-3 text-right font-medium">Thao tác</th>
+              <th scope="col" className="pb-2.5 pr-3 font-medium">
+                Họ tên
+              </th>
+              <th scope="col" className="px-3 pb-2.5 font-medium">
+                Email
+              </th>
+              <th scope="col" className="px-3 pb-2.5 font-medium">
+                Phạm vi và vai
+              </th>
+              <th scope="col" className="px-3 pb-2.5 font-medium">
+                Trạng thái
+              </th>
+              <th scope="col" className="pb-2.5 pl-3 text-right font-medium">
+                Thao tác
+              </th>
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
-              <tr key={user.email} className="h-14 border-b border-border hover:bg-sunken">
-                <td className="py-2 pr-3 text-[15px] font-medium leading-6">{user.name}</td>
-                <td className="px-3 py-2 font-mono text-[13px] text-secondary">{user.email}</td>
-                <td className="px-3 py-2 text-sm leading-[22px]">{user.role}</td>
-                <td className="px-3 py-2">
-                  <span className="rounded-[4px] bg-indigo-soft px-2 py-1 text-[13px] font-medium leading-[18px] text-indigo">
-                    {user.scope}
-                  </span>
-                </td>
-                <td className="py-2 pl-3 text-right">
-                  <button
-                    type="button"
-                    disabled
-                    title="Cần PATCH /users/:id — chưa hiện thực"
-                    className="min-h-10 rounded-[8px] border border-border-strong px-3 text-sm text-muted disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Đổi vai
-                  </button>
+            {items.map((user) => {
+              const laToi = user.id === me?.id;
+              const khoa = dangGhi === user.id;
+              return (
+                <tr
+                  key={user.id}
+                  className={cn(
+                    "border-b border-border align-top hover:bg-sunken",
+                    !user.isActive && "opacity-60",
+                  )}
+                >
+                  <td className="py-3 pr-3 text-[15px] font-medium leading-6">
+                    {user.name}
+                    {user.code && (
+                      <span className="ml-2 font-mono text-[12px] text-muted">{user.code}</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 font-mono text-[13px] text-secondary">{user.email}</td>
+                  <td className="px-3 py-3">
+                    {user.memberships.length === 0 ? (
+                      <span className="text-[13px] leading-5 text-muted">
+                        Không thuộc đơn vị nào · chỉ đọc tài liệu toàn trường
+                      </span>
+                    ) : (
+                      <ul className="flex flex-col gap-1.5">
+                        {user.memberships.map((m) => (
+                          <li key={m.departmentId} className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-[4px] bg-indigo-soft px-2 py-1 text-[13px] font-medium leading-[18px] text-indigo">
+                              {m.name}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={khoa || (laToi && m.roleCode === "ADMIN")}
+                              title={
+                                laToi && m.roleCode === "ADMIN"
+                                  ? "Không thể tự hạ vai của chính mình"
+                                  : `Đổi thành ${m.roleCode === "ADMIN" ? "sinh viên" : "quản trị viên"}`
+                              }
+                              onClick={() =>
+                                xuLy(user.id, () =>
+                                  doiVai(
+                                    m.departmentId,
+                                    user.id,
+                                    m.roleCode === "ADMIN" ? "STUDENT" : "ADMIN",
+                                  ),
+                                )
+                              }
+                              className="min-h-8 rounded-[6px] border border-border-strong px-2 text-[13px] leading-5 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {nhanVai(m.roleCode)}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-sm leading-[22px]">
+                    <span className={user.isActive ? "text-success" : "text-danger"}>
+                      {user.isActive ? "Đang hoạt động" : "Đã vô hiệu hóa"}
+                    </span>
+                  </td>
+                  <td className="py-3 pl-3 text-right">
+                    <button
+                      type="button"
+                      disabled={khoa || (laToi && user.isActive)}
+                      title={
+                        laToi && user.isActive
+                          ? "Không thể tự vô hiệu hóa tài khoản của chính mình"
+                          : undefined
+                      }
+                      onClick={() => xuLy(user.id, () => batTat(user.id, !user.isActive))}
+                      className="min-h-10 rounded-[8px] border border-border-strong px-3 text-sm hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {user.isActive ? "Vô hiệu hóa" : "Kích hoạt"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+            {!dangTai && items.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-[15px] leading-6 text-muted">
+                  Không có người dùng nào khớp.
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
 
       <p className="mt-5 max-w-[64ch] text-sm leading-[22px] text-muted">
-        Dữ liệu mẫu. Danh sách thật cần <code className="font-mono text-[13px]">GET /users</code>, và
-        đổi vai cần <code className="font-mono text-[13px]">PATCH /users/:id</code> — cả hai chưa
-        được hiện thực.
+        Vô hiệu hóa KHÔNG xóa tài khoản — lịch sử hội thoại và tài liệu đã tải lên vẫn tham chiếu tới
+        người dùng. Tạo tài khoản mới cần <code className="font-mono text-[13px]">POST /users</code>,
+        chưa được hiện thực; tài khoản hiện được tạo bằng{" "}
+        <code className="font-mono text-[13px]">pnpm db:seed</code>.
       </p>
     </div>
   );

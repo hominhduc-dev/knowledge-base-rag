@@ -134,34 +134,6 @@ export function mockAnswer(question: string): { answer: string; sources: Source[
 // Giữ lại dữ liệu giả song song với API thật là để hai nguồn sự thật cùng tồn
 // tại, và người kiểm thử không biết mình đang nhìn cái nào.
 
-export const departments = [
-  { name: "Khoa Công nghệ Thông tin", kind: "Khoa · 4 bộ môn", docs: 24, users: 1180, staff: "Trần Thị Hoà" },
-  { name: "Khoa Kiến trúc", kind: "Khoa · 3 bộ môn", docs: 17, users: 940, staff: "Lê Văn Bằng" },
-  { name: "Khoa Xây dựng", kind: "Khoa · 5 bộ môn", docs: 31, users: 1620, staff: "Phạm Quốc Đạt" },
-  { name: "Phòng Đào tạo", kind: "Phòng ban", docs: 12, users: 26, staff: "Nguyễn Thu Hà" },
-  { name: "Phòng Công tác Sinh viên", kind: "Phòng ban", docs: 9, users: 18, staff: "Vũ Đình Nam" },
-];
-
-/**
- * Dữ liệu giả cho màn quản trị, phản chiếu `server/prisma/seed.ts`.
- *
- * Chỉ có HAI vai. Giảng viên (Đỗ Anh Khoa) mang vai "Sinh viên" là đúng, không
- * phải sót: vai quyết định *làm được gì*, mà giảng viên chỉ cần đọc tài liệu của
- * khoa mình — xem docs/phan-quyen.md mục 1.
- *
- * Xóa khối này khi `GET /users` hoạt động.
- */
-export const users = [
-  { name: "Đỗ Anh Khoa", email: "khoa.da@dau.edu.vn", role: "Sinh viên", scope: "Khoa Công nghệ Thông tin" },
-  { name: "Trần Thị Hoà", email: "hoa.tt@dau.edu.vn", role: "Quản trị viên", scope: "Khoa Công nghệ Thông tin" },
-  { name: "Lê Văn Bằng", email: "bang.lv@dau.edu.vn", role: "Quản trị viên", scope: "Khoa Kiến trúc" },
-  { name: "Phạm Quốc Đạt", email: "dat.pq@dau.edu.vn", role: "Quản trị viên", scope: "Khoa Xây dựng" },
-  { name: "Vũ Đình Nam", email: "nam.vd@dau.edu.vn", role: "Quản trị viên", scope: "Phòng Công tác Sinh viên" },
-  { name: "Nguyễn Thu Hà", email: "ha.nt@dau.edu.vn", role: "Quản trị viên", scope: "Toàn trường" },
-  { name: "Hồ Minh Đức", email: "duc_2351220193@dau.edu.vn", role: "Sinh viên", scope: "Khoa Công nghệ Thông tin" },
-  { name: "Võ Minh Hiếu", email: "hieu_2351220221@dau.edu.vn", role: "Sinh viên", scope: "Khoa Kiến trúc" },
-];
-
 // Ma trận quyền đã chuyển sang `features/admin/permissions.ts`.
 //
 // Nó là HẰNG SỐ, không phải dữ liệu giả: mọi thứ trong file này rồi sẽ bị xóa khi
