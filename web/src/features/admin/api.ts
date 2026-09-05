@@ -2,7 +2,7 @@
 // Gọi API quản trị — docs/api-contract.md mục 8.
 //
 // Hai endpoint đơn vị, không phải một: `/departments` mở cho mọi vai nhưng
-// KHÔNG kèm số đếm, `/departments/full` mới có và chỉ ADMIN gọi được. Màn quản
+// KHÔNG kèm số đếm, `/departments/full` mới có và chỉ SYSTEM_ADMIN gọi được. Màn quản
 // trị dùng bản đầy đủ.
 // ---------------------------------------------------------------------------
 import { apiClient, apiPost } from "@/lib/api-client";
@@ -24,7 +24,7 @@ export type UserMembership = {
   departmentId: string;
   code: string;
   name: string;
-  roleCode: "STUDENT" | "ADMIN";
+  roleCode: "USER" | "CONTENT_ADMIN" | "SYSTEM_ADMIN";
 };
 
 export type UserItem = {
@@ -66,10 +66,9 @@ export function batTat(id: string, isActive: boolean) {
 
 /**
  * Đổi vai = sửa một dòng `department_members`, KHÔNG phải sửa người dùng.
- * Một người có thể là ADMIN ở phòng mình và STUDENT ở nơi khác, nên endpoint
- * nằm dưới đơn vị.
+ * Giữ endpoint cũ để tương thích; backend chỉ nhận tư cách CNTT.
  */
-export function doiVai(departmentId: string, userId: string, roleCode: "STUDENT" | "ADMIN") {
+export function doiVai(departmentId: string, userId: string, roleCode: "USER" | "CONTENT_ADMIN" | "SYSTEM_ADMIN") {
   return apiPost<{ departmentId: string; userId: string; roleCode: string }>(
     `/departments/${departmentId}/members`,
     { userId, roleCode },
@@ -80,8 +79,8 @@ export function goThanhVien(departmentId: string, userId: string) {
   return apiClient<null>(`/departments/${departmentId}/members/${userId}`, { method: "DELETE" });
 }
 
-export function nhanVai(roleCode: "STUDENT" | "ADMIN"): string {
-  return roleCode === "ADMIN" ? "Quản trị viên" : "Sinh viên";
+export function nhanVai(roleCode: "USER" | "CONTENT_ADMIN" | "SYSTEM_ADMIN"): string {
+  return roleCode === "SYSTEM_ADMIN" ? "Quản Trị Viên" : roleCode === "CONTENT_ADMIN" ? "Giáo vụ khoa CNTT" : "Sinh Viên CNTT";
 }
 
 export function nhanLoaiDonVi(type: DepartmentBrief["type"]): string {

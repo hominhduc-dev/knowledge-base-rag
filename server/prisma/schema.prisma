@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Tàng Thư — Hệ thống hỏi đáp tri thức học vụ
+// Sổ Tay Sinh Viên CNTT — Hệ thống hỏi đáp tri thức học vụ
 // Nguồn duy nhất của lược đồ CSDL. Sơ đồ tương ứng: docs/erd.md
 //
 // CHỦ SỞ HỮU: Hồ Minh Đức (Tech Lead).
@@ -30,15 +30,13 @@ datasource db {
 // ENUM
 // ===========================================================================
 
-/// Hai vai, không thêm vai thứ ba.
+/// Ba vai: người dùng, quản trị nội dung, quản trị hệ thống.
 ///
-/// Vai quyết định LÀM ĐƯỢC GÌ; đơn vị quyết định THẤY ĐƯỢC GÌ. Hai sinh viên
-/// cùng vai STUDENT nhưng khác khoa vẫn nhận hai tập kết quả khác nhau, vì phạm
-/// vi lấy từ `department_members` chứ không từ cột `role`. Tách hai trục này để
-/// thêm vai mới sau này không phải sửa câu truy vấn truy hồi.
+/// Vai quyết định thao tác. Cả ba vai chỉ dùng kho CNTT và quy định chung.
 enum MemberRole {
-  STUDENT
-  ADMIN
+  USER
+  CONTENT_ADMIN
+  SYSTEM_ADMIN
 
   @@map("member_role")
 }
@@ -79,7 +77,7 @@ enum MessageRole {
 // NGƯỜI DÙNG VÀ ĐƠN VỊ
 // ===========================================================================
 
-/// Tài khoản do ADMIN cấp — hệ thống không có chức năng tự đăng ký.
+/// Tài khoản do SYSTEM_ADMIN cấp — hệ thống không có chức năng tự đăng ký.
 ///
 /// Cho tự đăng ký kèm tự chọn khoa là vô hiệu hóa cách ly phạm vi ngay tại cửa
 /// vào, trong khi bộ kiểm thử vẫn xanh vì nó dùng tài khoản seed.
@@ -135,8 +133,7 @@ model Department {
 /// Quan hệ nhiều–nhiều giữa người và đơn vị. ĐÂY là nơi quyết định phạm vi.
 ///
 /// Một giảng viên dạy hai khoa có hai dòng ở bảng này thay vì hai tài khoản.
-/// Vai gắn với TỪNG dòng, nên một người có thể là ADMIN ở phòng ban mình và
-/// STUDENT ở nơi khác — `lib/scope.ts` gộp lại thành quyền hiệu dụng.
+/// Giữ bảng thành viên để tương thích dữ liệu; ứng dụng chỉ dùng dòng thuộc CNTT.
 model DepartmentMember {
   id           String     @id @default(uuid()) @db.Uuid
   userId       String     @map("user_id") @db.Uuid

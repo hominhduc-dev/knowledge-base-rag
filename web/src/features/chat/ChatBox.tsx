@@ -19,7 +19,6 @@ export function ChatBox() {
   const currentUser = useCurrentUser();
   // Mặc định theo đơn vị của người đăng nhập, không cứng hóa một khoa.
   // `AuthGuard` bảo đảm đã có người dùng trước khi trang này được kết xuất.
-  const [scope, setScope] = useState(currentUser?.scope ?? "");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,13 +29,7 @@ export function ChatBox() {
   // `null` là hội thoại mới; máy chủ trả về id ở sự kiện `done` của lượt đầu.
   const [conversationId, setConversationId] = useState<string | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
-  // Chỉ ADMIN được đổi phạm vi tra cứu; STUDENT bị khóa theo đơn vị của mình.
-  //
-  // Đây CHỈ là chuyện hiển thị. Phạm vi thật do máy chủ quyết định từ JWT và áp
-  // trong mệnh đề WHERE của truy vấn (docs/phan-quyen.md mục 4) — sửa state này
-  // trong trình duyệt không mở thêm được tài liệu nào.
-  const scopeLocked = currentUser?.roleCode !== "ADMIN";
-  const effectiveScope = (scopeLocked ? currentUser?.scope : scope) ?? "";
+  const effectiveScope = currentUser?.scope ?? "Ngành CNTT · DAU";
 
   const sources = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -163,7 +156,7 @@ export function ChatBox() {
 
   return (
     <main className="flex h-dvh overflow-hidden bg-base">
-      <Sidebar open={sidebarOpen} scope={effectiveScope} scopeLocked={scopeLocked} onScope={setScope} onNewChat={newChat} onClose={() => setSidebarOpen(false)} />
+      <Sidebar open={sidebarOpen} scope={effectiveScope} onNewChat={newChat} onClose={() => setSidebarOpen(false)} />
 
       <section className="relative flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-2.5 border-b border-border bg-surface px-4 py-2.5 md:hidden">
@@ -196,7 +189,7 @@ export function ChatBox() {
               />
               <button type="button" onClick={() => void send()} disabled={loading || !input.trim()} className="absolute bottom-2.5 right-2.5 flex size-[34px] items-center justify-center rounded-[8px] bg-accent text-white hover:bg-accent-hover disabled:opacity-40" aria-label="Gửi câu hỏi"><Send className="size-4" /></button>
             </div>
-            <p className="mt-2 text-[13px] leading-5 text-muted">Câu trả lời chỉ dựa trên tài liệu trong phạm vi {effectiveScope} và tài liệu toàn trường.</p>
+            <p className="mt-2 text-[13px] leading-5 text-muted">Câu trả lời chỉ dựa trên tài liệu trong phạm vi {effectiveScope} và quy định chung áp dụng cho sinh viên CNTT.</p>
           </div>
         </div>
       </section>

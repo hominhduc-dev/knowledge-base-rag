@@ -1,4 +1,4 @@
-# Bảng thuật ngữ — Tàng Thư
+# Bảng thuật ngữ — Sổ Tay Sinh Viên CNTT
 
 Dùng thống nhất trong **báo cáo, tài liệu và bình luận mã nguồn**. Tên biến, tên hàm, tên bảng trong code vẫn giữ tiếng Anh.
 

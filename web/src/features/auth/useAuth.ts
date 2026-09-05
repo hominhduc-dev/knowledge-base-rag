@@ -24,11 +24,11 @@ export type AuthUser = {
   code: string | null;
   name: string;
   email: string;
-  /** Nhãn hiển thị: "Sinh viên" hoặc "Quản trị viên". */
+  /** Nhãn hiển thị: "Sinh Viên CNTT", "Giáo vụ khoa CNTT", "Quản Trị Viên". */
   role: string;
-  /** Mã vai, dùng cho logic. Chỉ có hai giá trị. */
-  roleCode: "STUDENT" | "ADMIN";
-  /** Chuỗi hiển thị phạm vi: tên đơn vị, hoặc "Toàn trường" với ADMIN. */
+  /** Mã vai, dùng cho logic. Có ba giá trị. */
+  roleCode: "USER" | "CONTENT_ADMIN" | "SYSTEM_ADMIN";
+  /** Cùng phạm vi CNTT cho cả ba vai. */
   scope: string;
 };
 
@@ -36,7 +36,7 @@ export type Membership = {
   departmentId: string;
   code: string;
   name: string;
-  roleCode: "STUDENT" | "ADMIN";
+  roleCode: "USER" | "CONTENT_ADMIN" | "SYSTEM_ADMIN";
 };
 
 type Session = { user: AuthUser; memberships: Membership[] };
@@ -184,8 +184,8 @@ export function useAuth() {
       const data = await apiPost<LoginResponse>("/auth/login", { account, password });
       datPhien({ user: data.user, memberships: data.memberships }, data.token);
 
-      // ADMIN vào thẳng màn quản lý tài liệu; còn lại vào hỏi đáp.
-      router.push(data.user.roleCode === "ADMIN" ? "/documents" : "/chat");
+      // SYSTEM_ADMIN vào thẳng màn quản lý tài liệu; còn lại vào hỏi đáp.
+      router.push(data.user.roleCode !== "USER" ? "/documents" : "/chat");
     },
     [router],
   );
@@ -201,7 +201,7 @@ export function useAuth() {
 /**
  * Khôi phục phiên khi tải lại trang: hỏi lại máy chủ xem token còn dùng được không.
  *
- * Cần bước này vì hồ sơ trong localStorage có thể đã cũ — ADMIN đổi vai hoặc vô
+ * Cần bước này vì hồ sơ trong localStorage có thể đã cũ — SYSTEM_ADMIN đổi vai hoặc vô
  * hiệu hóa tài khoản trong lúc người dùng đang mở tab. Tin vào bản lưu là giữ
  * nguyên quyền cũ cho tới khi token hết hạn, tối đa bảy ngày.
  *

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronDown, X } from "lucide-react";
+import { X } from "lucide-react";
 import { history } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "./UserMenu";
@@ -9,15 +9,12 @@ import { UserMenu } from "./UserMenu";
 type SidebarProps = {
   open: boolean;
   scope: string;
-  scopeLocked?: boolean;
-  onScope: (scope: string) => void;
   onNewChat: () => void;
   onClose: () => void;
 };
 
-const scopes = ["Khoa Công nghệ Thông tin", "Khoa Xây dựng", "Toàn trường"];
 
-export function Sidebar({ open, scope, scopeLocked = false, onScope, onNewChat, onClose }: SidebarProps) {
+export function Sidebar({ open, scope, onNewChat, onClose }: SidebarProps) {
   return (
     <>
       {open && <button type="button" aria-label="Đóng thanh điều hướng" className="fixed inset-0 z-40 bg-primary/20 md:hidden" onClick={onClose} />}
@@ -27,26 +24,14 @@ export function Sidebar({ open, scope, scopeLocked = false, onScope, onNewChat, 
       )}>
         <div className="flex h-[57px] items-center gap-2.5 border-b border-border px-4">
           <Image src="/logo-dau.png" alt="DAU" width={24} height={24} />
-          <span className="font-serif text-[17px] font-semibold leading-6">Tàng Thư</span>
+          <span className="font-serif text-[15px] font-semibold leading-5">Sổ Tay Sinh Viên CNTT</span>
           <button type="button" onClick={onClose} className="ml-auto flex size-11 items-center justify-center rounded-[8px] text-secondary hover:bg-surface md:hidden" aria-label="Đóng menu"><X className="size-5" /></button>
         </div>
 
         <div className="border-b border-border p-4">
           <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">Phạm vi tra cứu</div>
-          {scopeLocked ? (
-            <div>
-              <div aria-label={`Phạm vi theo đơn vị công tác: ${scope}`} className="flex min-h-11 items-center rounded-[4px] border border-[#dbd1bf] bg-indigo-soft px-2.5 text-[13px] font-medium text-indigo">{scope}</div>
-              <p className="mb-0 mt-1.5 text-xs leading-[18px] text-muted">Theo đơn vị công tác</p>
-            </div>
-          ) : (
-            <div className="relative">
-              <label htmlFor="scope" className="sr-only">Chọn phạm vi tra cứu</label>
-              <select id="scope" value={scope} onChange={(event) => onScope(event.target.value)} className="h-11 w-full appearance-none rounded-[4px] border border-[#dbd1bf] bg-indigo-soft px-2.5 pr-8 text-[13px] font-medium text-indigo outline-none focus:ring-2 focus:ring-accent">
-                {scopes.map((item) => <option key={item}>{item}</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-3.5 size-4 text-indigo" />
-            </div>
-          )}
+          <div className="rounded-[4px] border border-[#dbd1bf] bg-indigo-soft px-2.5 py-2 text-[13px] font-medium text-indigo">{scope}</div>
+          <p className="mb-0 mt-1.5 text-xs leading-[18px] text-muted">Tài liệu CNTT và quy định chung của trường</p>
         </div>
 
         <div className="p-4 pb-3.5">

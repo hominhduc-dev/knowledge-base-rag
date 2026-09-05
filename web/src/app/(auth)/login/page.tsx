@@ -22,15 +22,15 @@ export default function LoginPage() {
               Trường Đại học Kiến trúc Đà Nẵng
             </div>
           </div>
-          <h1 className="mt-3 font-serif text-[36px] font-semibold leading-[44px]">Tàng Thư</h1>
+          <h1 className="mt-3 font-serif text-[32px] font-semibold leading-[38px] sm:text-[36px] sm:leading-[44px]">Sổ Tay Sinh Viên CNTT</h1>
           <p className="mt-1.5 text-[15px] leading-6 text-secondary">
-            Hệ thống hỏi đáp tri thức học vụ. Đăng nhập bằng tài khoản do trường cấp.
+            Hỏi đáp học vụ dành cho sinh viên ngành Công nghệ Thông tin. Đăng nhập bằng tài khoản được quản trị cấp.
           </p>
 
           <LoginForm />
 
           <p className="mt-4 border-t border-border pt-3 text-[13px] leading-5 text-muted [@media(max-height:660px)]:hidden">
-            Phạm vi tài liệu anh/chị truy cập được xác định theo đơn vị và vai trong hệ thống nhân sự của trường.
+            Tra cứu tài liệu ngành CNTT và quy định chung của Trường Đại học Kiến trúc Đà Nẵng.
           </p>
         </section>
       </main>

@@ -74,7 +74,7 @@ export async function getFile(req: Request, res: Response): Promise<void> {
   res.end(buffer);
 }
 
-/** POST /documents — ADMIN */
+/** POST /documents — CONTENT_ADMIN / SYSTEM_ADMIN */
 export async function create(req: Request, res: Response): Promise<void> {
   const file = req.file;
   if (!file) throw validationError('Thiếu tệp. Gửi bằng multipart/form-data ở trường "file".');
@@ -88,21 +88,21 @@ export async function create(req: Request, res: Response): Promise<void> {
   ok(res, await service.create(file, sourceType, input, currentUser(req)), 202);
 }
 
-/** PATCH /documents/:id — ADMIN */
+/** PATCH /documents/:id — CONTENT_ADMIN / SYSTEM_ADMIN */
 export async function update(req: Request, res: Response): Promise<void> {
   const { id } = documentIdParam.parse(req.params);
   const input = updateSchema.parse(req.body);
   ok(res, await service.update(id, input, currentUser(req)));
 }
 
-/** DELETE /documents/:id — ADMIN */
+/** DELETE /documents/:id — CONTENT_ADMIN / SYSTEM_ADMIN */
 export async function remove(req: Request, res: Response): Promise<void> {
   const { id } = documentIdParam.parse(req.params);
   await service.remove(id, currentUser(req));
   res.status(204).end();
 }
 
-/** POST /documents/:id/retry — ADMIN */
+/** POST /documents/:id/retry — CONTENT_ADMIN / SYSTEM_ADMIN */
 export async function retry(req: Request, res: Response): Promise<void> {
   const { id } = documentIdParam.parse(req.params);
   ok(res, await service.retry(id, currentUser(req)), 202);

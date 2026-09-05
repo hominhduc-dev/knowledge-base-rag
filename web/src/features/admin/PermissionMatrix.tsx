@@ -45,22 +45,9 @@ export function PermissionMatrix() {
       </div>
 
       <div className="mt-5 max-w-[64ch] space-y-2 text-sm leading-[22px] text-muted">
-        <p>
-          Dấu ✓ là có quyền <strong className="font-medium text-secondary">trong phạm vi đơn vị</strong> của
-          người dùng. Quản trị viên có quyền trên toàn trường.
-        </p>
-        <p>
-          Chỉ có hai vai. Bảy chức danh thật trong trường — sinh viên, giảng viên, cố vấn học tập,
-          giáo vụ khoa, trợ lý sinh viên, trưởng khoa, chuyên viên phòng ban — chỉ tạo ra hai mức
-          quyền khác nhau.
-        </p>
-        <p>
-          <strong className="font-medium text-secondary">Vai quyết định làm được gì; đơn vị quyết định
-          thấy được gì.</strong>{" "}
-          Hai sinh viên cùng vai nhưng khác khoa vẫn nhận hai tập kết quả khác nhau, vì phạm vi lấy
-          từ danh sách đơn vị của họ chứ không từ vai. Giảng viên vì thế cũng mang vai Sinh viên —
-          họ chỉ cần đọc tài liệu của khoa mình.
-        </p>
+        <p>Cả ba vai dùng chung kho tài liệu ngành CNTT và quy định chung của trường áp dụng cho sinh viên CNTT.</p>
+        <p>Giáo vụ khoa CNTT không được quản lý tài khoản hoặc cấp quyền. Chỉ quản trị viên được phân quyền.</p>
+        <p>Đánh giá truy hồi và bài thực hành TCP/HTTP chạy qua CLI của người vận hành, không phải chức năng web.</p>
       </div>
     </div>
   );

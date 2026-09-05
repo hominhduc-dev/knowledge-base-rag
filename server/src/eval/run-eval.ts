@@ -23,7 +23,7 @@ import { BO_CAU_HOI_VANG, type GoldenQuestion } from "./golden-questions.js";
 import { hangTrungDauTien, lamTron, mrr, recallAtK } from "./metrics.js";
 
 const prisma = new PrismaClient({ log: [] });
-const TEN_BO = "golden-30";
+const TEN_BO = "cntt-v1";
 
 type CauHinh = {
   ten: string;
@@ -122,19 +122,15 @@ async function nguoiHoi(maDonVi: string | null): Promise<AuthenticatedUser> {
     fullName: "Bộ đánh giá",
   };
 
-  if (maDonVi === null) {
-    // Câu hỏi không phụ thuộc đơn vị → dùng quyền ADMIN, thấy toàn bộ kho.
-    return { ...chung, role: MemberRole.ADMIN, departments: [], departmentIds: [] };
-  }
 
   const d = await prisma.department.findUniqueOrThrow({
-    where: { code: maDonVi },
+    where: { code: maDonVi ?? "CNTT" },
     select: { id: true, code: true, name: true },
   });
   return {
     ...chung,
-    role: MemberRole.STUDENT,
-    departments: [{ ...d, role: MemberRole.STUDENT }],
+    role: MemberRole.USER,
+    departments: [{ ...d, role: MemberRole.USER }],
     departmentIds: [d.id],
   };
 }
@@ -298,7 +294,7 @@ async function main(): Promise<void> {
     return t ? Number(t.split("=")[1]) : mac;
   };
 
-  console.log(`\nBộ đánh giá Tàng Thư · ${BO_CAU_HOI_VANG.length} câu hỏi vàng`);
+  console.log(`\nBộ đánh giá Sổ Tay Sinh Viên CNTT · ${BO_CAU_HOI_VANG.length} câu hỏi vàng`);
   console.log(`Model nhúng: ${MODEL_HIEN_TAI} · ${env.EMBEDDING_DIM} chiều\n`);
 
   process.stdout.write("Nạp bộ câu hỏi vào CSDL… ");

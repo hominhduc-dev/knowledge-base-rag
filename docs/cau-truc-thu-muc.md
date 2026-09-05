@@ -1,4 +1,6 @@
-# Cấu trúc thư mục — Tàng Thư
+> **Cập nhật phạm vi 05/09/2026:** ứng dụng hiện chỉ phục vụ sinh viên CNTT, Đại học Kiến trúc Đà Nẵng; ba vai `USER`, `CONTENT_ADMIN`, `SYSTEM_ADMIN`. [PHAM-VI-CNTT.md](PHAM-VI-CNTT.md) và [phan-quyen.md](phan-quyen.md) là đặc tả hiện hành. Các phần hai vai/đa khoa bên dưới là thiết kế v2 được giữ để tham khảo, không còn là yêu cầu triển khai.
+
+# Cấu trúc thư mục — Sổ Tay Sinh Viên CNTT
 
 **Bản final · chốt sau khi rà lại stack, 22/08/2026**
 

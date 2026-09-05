@@ -1,0 +1,66 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+actor "Sinh Viên CNTT\n(USER)" as Reader
+actor "Giáo vụ khoa CNTT\n(CONTENT_ADMIN)" as Content
+actor "Quản Trị Viên\n(SYSTEM_ADMIN)" as System
+Content --|> Reader
+System --|> Content
+rectangle "Sổ Tay Sinh Viên CNTT — Đại học Kiến trúc Đà Nẵng" {
+ usecase "UC01\nĐăng nhập" as UC01
+ usecase "UC02\nĐăng xuất" as UC02
+ usecase "UC03\nXem thông tin cá nhân" as UC03
+ usecase "UC04\nĐổi mật khẩu" as UC04
+ usecase "UC05\nHỏi đáp học vụ" as UC05
+ usecase "UC06\nXem lại hội thoại" as UC06
+ usecase "UC07\nTra cứu kho tài liệu" as UC07
+ usecase "UC08\nXem nguồn trích dẫn" as UC08
+ usecase "UC09\nTheo dõi xử lý tài liệu" as UC09
+ usecase "UC10\nTải lên tài liệu" as UC10
+ usecase "UC11\nSửa thông tin tài liệu" as UC11
+ usecase "UC12\nGỡ tài liệu" as UC12
+ usecase "UC13\nChạy lại xử lý lỗi" as UC13
+ usecase "UC14\nTra cứu người dùng" as UC14
+ usecase "UC15\nKhóa / mở tài khoản" as UC15
+ usecase "UC16\nPhân quyền tài khoản" as UC16
+}
+Reader -- UC01
+Reader -- UC02
+Reader -- UC03
+Reader -- UC04
+Reader -- UC05
+Reader -- UC06
+Reader -- UC07
+Reader -- UC08
+Reader -- UC09
+Content -- UC10
+Content -- UC11
+Content -- UC12
+Content -- UC13
+System -- UC14
+System -- UC15
+System -- UC16
+note bottom of UC07
+Cả ba vai: tài liệu CNTT và quy định chung.
+Không có quyền truy cập tài liệu khoa khác.
+end note
+@enduml
+
+@startuml
+left to right direction
+actor "Người vận hành" as Operator
+actor "API client đã đăng nhập" as Client
+actor "Gemini API" as Gemini
+rectangle "Sổ Tay Sinh Viên CNTT — kỹ thuật" {
+ usecase "UC18\nTra cứu lai qua API" as UC18
+ usecase "UC19\nĐánh giá truy hồi" as UC19
+ usecase "UC20\nKiểm tra sức khỏe" as UC20
+ usecase "UC05 — Hỗ trợ hỏi đáp" as QA
+ usecase "UC10/13 — Hỗ trợ nạp tài liệu" as Ingest
+}
+Operator -- UC19
+Operator -- UC20
+Client -- UC18
+Gemini -- QA
+Gemini -- Ingest
+@enduml

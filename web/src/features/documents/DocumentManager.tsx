@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCurrentUser } from "@/features/auth/useAuth";
+import { useCurrentUser, useMemberships } from "@/features/auth/useAuth";
+import { canManageContent } from "@/features/admin/permissions";
 import { ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import {
@@ -26,8 +27,8 @@ type Filter = "all" | "department" | "global";
 
 const NHAN_LOC: Record<Filter, string> = {
   all: "Tất cả",
-  department: "Của khoa",
-  global: "Toàn trường",
+  department: "Ngành CNTT",
+  global: "Quy định chung",
 };
 
 /**
@@ -49,7 +50,10 @@ type UploadItem = {
 
 export function DocumentManager() {
   const user = useCurrentUser();
-  const laAdmin = user?.roleCode === "ADMIN";
+  const laAdmin = canManageContent(user?.roleCode);
+  const memberships = useMemberships();
+  const [category, setCategory] = useState("cntt");
+  const cnttId = memberships.find((m) => m.code === "CNTT")?.departmentId;
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -135,6 +139,7 @@ export function DocumentManager() {
   }, [uploads, nap]);
 
   async function themTep(files: File[]) {
+    if (category === "cntt" && !cnttId) { setLoi("Không xác định được kho CNTT. Hãy đăng nhập lại."); return; }
     for (const file of files) {
       const key = crypto.randomUUID();
       // Tiêu đề mặc định lấy từ tên tệp, bỏ phần đuôi.
@@ -146,7 +151,7 @@ export function DocumentManager() {
       ]);
 
       try {
-        const kq = await taiLen(file, title);
+        const kq = await taiLen(file, title, category === "cntt" ? cnttId : null);
         setUploads((cur) =>
           cur.map((x) => (x.key === key ? { ...x, documentId: kq.documentId, phase: "process" } : x)),
         );
@@ -274,7 +279,7 @@ export function DocumentManager() {
           </p>
         </div>
 
-        {/* Chỉ ADMIN mới tải lên được. Máy chủ chặn bằng `requireAdmin`; ẩn ở đây
+        {/* Chỉ SYSTEM_ADMIN mới tải lên được. Máy chủ chặn bằng `requireAdmin`; ẩn ở đây
             chỉ để sinh viên không bấm vào rồi nhận 403. */}
         {laAdmin && (
           <>
@@ -296,6 +301,15 @@ export function DocumentManager() {
         )}
       </div>
 
+      {laAdmin && (
+        <label className="mt-5 flex flex-wrap items-center gap-3 text-sm">
+          Nhóm tài liệu tải lên
+          <select aria-label="Nhóm tài liệu tải lên" value={category} onChange={(e) => setCategory(e.target.value)} className="min-h-10 rounded-[8px] border border-border px-3">
+            <option value="cntt">Tài liệu ngành CNTT</option>
+            <option value="common">Quy định chung áp dụng cho sinh viên CNTT</option>
+          </select>
+        </label>
+      )}
       {laAdmin && <UploadDropzone onFiles={(files) => void themTep(files)} />}
 
       {uploads.length > 0 && (

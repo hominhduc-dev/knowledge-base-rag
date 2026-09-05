@@ -20,7 +20,7 @@ documentsRouter.get("/documents/:id/status", requireAuth, controller.getStatus);
 documentsRouter.get("/documents/:id/file", requireAuth, controller.getFile);
 documentsRouter.get("/documents/:id", requireAuth, controller.get);
 
-// --- Ghi: chỉ ADMIN ---------------------------------------------------------
+// --- Ghi: chỉ SYSTEM_ADMIN ---------------------------------------------------------
 documentsRouter.post("/documents", requireAuth, requireAdmin, nhanTep, controller.create);
 documentsRouter.post("/documents/:id/retry", requireAuth, requireAdmin, controller.retry);
 documentsRouter.patch("/documents/:id", requireAuth, requireAdmin, controller.update);

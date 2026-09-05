@@ -1,5 +1,5 @@
 /**
- * Dữ liệu mồi cho Tàng Thư.
+ * Dữ liệu mồi cho Sổ Tay Sinh Viên CNTT.
  *
  * Chạy: pnpm --filter @tang-thu/backend db:seed
  *
@@ -34,30 +34,21 @@ const estimateTokens = (s: string) => Math.ceil(s.length / 3.5);
 
 const DEPARTMENTS = [
   { code: "CNTT", name: "Khoa Công nghệ Thông tin", type: DeptType.FACULTY },
-  { code: "KTR", name: "Khoa Kiến trúc", type: DeptType.FACULTY },
-  { code: "XD", name: "Khoa Xây dựng", type: DeptType.FACULTY },
-  { code: "PDT", name: "Phòng Đào tạo", type: DeptType.OFFICE },
-  { code: "CTSV", name: "Phòng Công tác Sinh viên", type: DeptType.OFFICE },
 ];
 
 // ===========================================================================
 // NGƯỜI DÙNG
 //
-// Bố trí có chủ đích để kiểm thử cách ly phạm vi theo CẢ HAI CHIỀU:
-// sinh viên CNTT và sinh viên Xây dựng, giáo vụ CNTT và giáo vụ Xây dựng.
-// Chỉ một chiều thì bộ kiểm thử có thể xanh trong khi vẫn rò rỉ chiều ngược lại.
+// Dữ liệu demo chỉ thuộc CNTT; ba vai phục vụ học phần Lập trình mạng.
 //
 // `code` là mã số sinh viên với sinh viên, mã cán bộ với tài khoản cán bộ/admin.
 // Sinh viên đăng nhập bằng mã hoặc email, mật khẩu mặc định là chính mã số sinh viên.
 // ===========================================================================
 
 const USERS = [
-  { code: "CB0231", email: "khoa.da@dau.edu.vn", fullName: "Đỗ Anh Khoa", role: MemberRole.STUDENT, dept: "CNTT" },
-  { code: "CB0142", email: "hoa.tt@dau.edu.vn", fullName: "Trần Thị Hoà", role: MemberRole.ADMIN, dept: "CNTT" },
-  { code: "CB0388", email: "dat.pq@dau.edu.vn", fullName: "Phạm Quốc Đạt", role: MemberRole.ADMIN, dept: "XD" },
-  { code: "CB0205", email: "bang.lv@dau.edu.vn", fullName: "Lê Văn Bằng", role: MemberRole.ADMIN, dept: "KTR" },
-  { code: "CB0417", email: "nam.vd@dau.edu.vn", fullName: "Vũ Đình Nam", role: MemberRole.ADMIN, dept: "CTSV" },
-  { code: "CB0006", email: "ha.nt@dau.edu.vn", fullName: "Nguyễn Thu Hà", role: MemberRole.ADMIN, dept: "PDT" },
+  { code: "CB0231", email: "khoa.da@dau.edu.vn", fullName: "Đỗ Anh Khoa", role: MemberRole.USER, dept: "CNTT" },
+  { code: "CB0142", email: "hoa.tt@dau.edu.vn", fullName: "Trần Thị Hoà", role: MemberRole.CONTENT_ADMIN, dept: "CNTT" },
+  { code: "CB0006", email: "ha.nt@dau.edu.vn", fullName: "Nguyễn Thu Hà", role: MemberRole.SYSTEM_ADMIN, dept: "CNTT" },
 ];
 
 // ===========================================================================
@@ -92,7 +83,7 @@ const GROUP_ORDER = [
 ];
 
 /** Chỉ khoa mới có sinh viên; phòng ban thì không. */
-const STUDENT_DEPARTMENTS = ["CNTT", "KTR", "XD"];
+const STUDENT_DEPARTMENTS = ["CNTT"];
 
 const groupToDepartment = new Map(
   GROUP_ORDER.map((group, i) => [group, STUDENT_DEPARTMENTS[i % STUDENT_DEPARTMENTS.length]]),
@@ -359,7 +350,7 @@ const DOCUMENTS: SeedDocument[] = [
 // theo một khóa tự nhiên ổn định (`code`, `email`, `file_hash`).
 //
 // Vì hệ thống KHÔNG có chức năng đăng ký, seed là cách DUY NHẤT để có tài khoản
-// mà demo. Seed hỏng thì không ai đăng nhập được, kể cả ADMIN — vì vậy nó phải
+// mà demo. Seed hỏng thì không ai đăng nhập được, kể cả SYSTEM_ADMIN — vì vậy nó phải
 // nằm trong CI.
 // ===========================================================================
 
@@ -429,7 +420,7 @@ async function main() {
       code,
       studentEmail(fullName, code),
       fullName,
-      MemberRole.STUDENT,
+      MemberRole.USER,
       deptCode,
       code,
     );
@@ -440,7 +431,7 @@ async function main() {
 
   // --- Tài liệu và đoạn văn -------------------------------------------------
   let soDoan = 0;
-  for (const doc of DOCUMENTS) {
+  for (const doc of DOCUMENTS.filter((d) => d.dept === null || d.dept === "CNTT")) {
     const departmentId = doc.dept ? (deptId.get(doc.dept) ?? null) : null;
     if (doc.dept && !departmentId) throw new Error(`Không tìm thấy đơn vị ${doc.dept}`);
 
@@ -508,29 +499,24 @@ async function main() {
       where: { documentId: document.id, chunkIndex: { gte: doc.chunks.length } },
     });
   }
-  console.log(`  Tài liệu:    ${DOCUMENTS.length}`);
+  console.log(`  Tài liệu:    ${DOCUMENTS.filter((d) => d.dept === null || d.dept === "CNTT").length}`);
   console.log(`  Đoạn văn:    ${soDoan}`);
 
   // --- Bộ câu hỏi vàng ------------------------------------------------------
   // Mới tạo bộ rỗng để bảng tồn tại và `eval` có chỗ ghi vào. Ba mươi câu hỏi
   // thật thuộc Sprint 4.
   await prisma.evalSet.upsert({
-    where: { name: "golden-30" },
+    where: { name: "cntt-v1" },
     update: {},
     create: {
-      name: "golden-30",
+      name: "cntt-v1",
       description: "Bộ câu hỏi vàng để đo recall@k và MRR. Sẽ điền ở Sprint 4.",
     },
   });
 
-  // --- Nhắc lại cặp đối chứng ----------------------------------------------
-  console.log(`\nMật khẩu sinh viên: chính mã số sinh viên. Mật khẩu cán bộ/admin: ${STAFF_SEED_PASSWORD}\n`);
-  console.log("Cặp đối chứng — cùng câu hỏi, hai kết quả khác nhau:");
-  console.log('  "Quy định về đồ án tốt nghiệp?"');
-  console.log("  2351220193 Hồ Minh Đức (CNTT)     → phải thấy 105 tín chỉ");
-  console.log("  2351220221 Võ Minh Hiếu (KTR)     → phải thấy  90 tín chỉ");
-  console.log("  ha.nt@dau.edu.vn  (ADMIN)         → thấy cả hai");
-  console.log("\nSinh viên nào thấy con số của khoa kia là đã rò rỉ phạm vi.\n");
+  console.log("\nPhạm vi demo: sinh viên CNTT; tài liệu CNTT và quy định chung.");
+  console.log("Vai: USER · CONTENT_ADMIN (CB0142) · SYSTEM_ADMIN (CB0006).");
+
 }
 
 main()

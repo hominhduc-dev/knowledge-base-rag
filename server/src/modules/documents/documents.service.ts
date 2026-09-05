@@ -9,7 +9,8 @@ import { Prisma } from "@prisma/client";
 import type { DocStatus } from "@prisma/client";
 import { prisma } from "../../config/prisma.js";
 import { forbiddenScope, notFound, validationError } from "../../lib/errors.js";
-import { scopeWhere } from "../../lib/scope.js";
+import { scopeWhere, documentWriteWhere } from "../../lib/scope.js";
+import { assertContentAdmin, canManageContent, PROGRAM_CODE } from "../../lib/roles.js";
 import type { AuthenticatedUser } from "../../types/express.js";
 import { buildLocator } from "../retrieval/index.js";
 import { duongDanLuu, luuTep, sha256, xoaTep } from "./documents.storage.js";
@@ -49,10 +50,8 @@ function toDto(row: HangDanhSach, user: AuthenticatedUser): KnowledgeDocument {
     chunks: row._count.chunks,
     updated: row.updatedAt.toISOString(),
     isGlobal: row.departmentId === null,
-    // Backend tính sẵn, frontend chỉ đọc cờ. Quy tắc hiện tại đơn giản (ADMIN sửa
-    // được tất cả) nhưng nó có thể đổi — để frontend tự suy từ vai là hai nơi
-    // phải sửa mỗi lần đổi.
-    canEdit: user.role === "ADMIN",
+    // Backend quyết định quyền sửa từ vai đã xác thực.
+    canEdit: canManageContent(user.role),
   };
 }
 
@@ -232,8 +231,21 @@ export async function getFile(id: string, user: AuthenticatedUser) {
 }
 
 // ===========================================================================
-// GHI — chỉ ADMIN, đã chặn ở tầng route
+// GHI — CONTENT_ADMIN và SYSTEM_ADMIN; service vẫn kiểm vai và phạm vi
 // ===========================================================================
+
+async function assertDocumentTarget(departmentId: string | null | undefined) {
+  if (departmentId == null) return;
+  const department = await prisma.department.findFirst({
+    where: { id: departmentId, code: PROGRAM_CODE }, select: { id: true },
+  });
+  if (!department) throw forbiddenScope("Chỉ nhận tài liệu ngành CNTT hoặc quy định chung áp dụng cho sinh viên CNTT.");
+}
+
+async function timDeQuanLy(id: string, user: AuthenticatedUser) {
+  assertContentAdmin(user);
+  return timTrongPhamVi(id, user);
+}
 
 export async function create(
   file: Express.Multer.File,
@@ -241,6 +253,8 @@ export async function create(
   input: CreateInput,
   user: AuthenticatedUser,
 ): Promise<{ documentId: string; status: string; jobId: string }> {
+  assertContentAdmin(user);
+  await assertDocumentTarget(input.departmentId);
   if (input.departmentId) {
     const ton = await prisma.department.findUnique({
       where: { id: input.departmentId },
@@ -255,13 +269,12 @@ export async function create(
   // cả lượt trích văn bản lẫn lượt gọi API nhúng sau này.
   const trung = await prisma.document.findUnique({
     where: { fileHash },
-    select: { id: true, title: true },
+    select: { id: true },
   });
   if (trung) {
     throw new (await import("../../lib/errors.js")).AppError(
       "DUPLICATE_DOCUMENT",
-      `Tệp này đã được tải lên với tiêu đề "${trung.title}".`,
-      { documentId: trung.id },
+      "Tệp này đã tồn tại trong hệ thống. Liên hệ quản trị nếu cần kiểm tra tài liệu.",
     );
   }
 
@@ -295,7 +308,8 @@ export async function create(
 }
 
 export async function update(id: string, input: UpdateInput, user: AuthenticatedUser) {
-  await timTrongPhamVi(id, user);
+  await timDeQuanLy(id, user);
+  await assertDocumentTarget(input.departmentId);
 
   if (input.departmentId) {
     const ton = await prisma.department.findUnique({
@@ -309,7 +323,7 @@ export async function update(id: string, input: UpdateInput, user: Authenticated
   // `documents_sync_chunk_scope` trong cơ sở dữ liệu — KHÔNG cập nhật tay ở đây.
   // Xem docs/erd.md mục 2.1.
   const row = await prisma.document.update({
-    where: { id },
+    where: { id, AND: [documentWriteWhere(user)] },
     data: {
       ...(input.title !== undefined ? { title: input.title } : {}),
       ...(input.departmentId !== undefined ? { departmentId: input.departmentId } : {}),
@@ -321,12 +335,12 @@ export async function update(id: string, input: UpdateInput, user: Authenticated
 }
 
 export async function remove(id: string, user: AuthenticatedUser): Promise<void> {
-  const doc = await timTrongPhamVi(id, user);
+  const doc = await timDeQuanLy(id, user);
 
   // Xóa cứng. Lược đồ v2 không có cột `deletedAt`, và lịch sử hội thoại vẫn an
   // toàn: `message_citations.document_id` dùng ON DELETE SET NULL nên trích dẫn
   // cũ vẫn hiển thị được, chỉ mất đường mở tệp. Xem docs/erd.md mục 4.
-  await prisma.document.delete({ where: { id } });
+  await prisma.document.delete({ where: { id, AND: [documentWriteWhere(user)] } });
 
   // Xóa tệp SAU khi bản ghi đã đi. Ngược lại thì một lần lỗi ở bước xóa bản ghi
   // để lại tài liệu trỏ vào tệp không còn tồn tại.
@@ -338,7 +352,7 @@ export async function remove(id: string, user: AuthenticatedUser): Promise<void>
 }
 
 export async function retry(id: string, user: AuthenticatedUser): Promise<{ jobId: string }> {
-  const doc = await timTrongPhamVi(id, user);
+  const doc = await timDeQuanLy(id, user);
   if (doc.status !== "FAILED") {
     throw validationError(
       `Chỉ chạy lại được tài liệu ở trạng thái failed; tài liệu này đang ở ${doc.status.toLowerCase()}.`,
@@ -347,7 +361,7 @@ export async function retry(id: string, user: AuthenticatedUser): Promise<{ jobI
 
   const { job } = await prisma.$transaction(async (tx) => {
     await tx.document.update({
-      where: { id },
+      where: { id, status: "FAILED", AND: [documentWriteWhere(user)] },
       data: { status: "PENDING", errorMessage: null },
     });
     // Job MỚI, không đặt lại job cũ: giữ được lịch sử đã thử bao nhiêu lần và

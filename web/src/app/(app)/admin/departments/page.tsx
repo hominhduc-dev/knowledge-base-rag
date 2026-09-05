@@ -1,9 +1,6 @@
-import type { Metadata } from "next";
-import { Header } from "@/components/layout/Header";
-import { AdminDashboard } from "@/features/admin/AdminDashboard";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Đơn vị" };
-
+/** Tương thích liên kết cũ; đồ án hiện không có màn quản trị nhiều khoa. */
 export default function DepartmentsPage() {
-  return <main className="min-h-screen"><Header section="admin" /><AdminDashboard activeTab="departments" /></main>;
+  redirect("/admin/users");
 }

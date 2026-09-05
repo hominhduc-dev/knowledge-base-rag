@@ -1,8 +1,10 @@
+> **Cập nhật phạm vi 05/09/2026:** ứng dụng hiện chỉ phục vụ sinh viên CNTT, Đại học Kiến trúc Đà Nẵng; ba vai `USER`, `CONTENT_ADMIN`, `SYSTEM_ADMIN`. [PHAM-VI-CNTT.md](PHAM-VI-CNTT.md) và [phan-quyen.md](phan-quyen.md) là đặc tả hiện hành. Các phần hai vai/đa khoa bên dưới là thiết kế v2 được giữ để tham khảo, không còn là yêu cầu triển khai.
+
 # PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
 
 ## Xây dựng hệ thống hỏi đáp trực tuyến quá trình học tập cho sinh viên DAU
 
-Tên sản phẩm: **Tàng Thư** · Phiên bản tài liệu 2.0
+Tên sản phẩm: **Sổ Tay Sinh Viên CNTT** · Phiên bản tài liệu 2.0
 Môn học: Lập trình mạng máy tính · Nhóm 4 người · 8 tuần
 Tech Lead: Hồ Minh Đức
 

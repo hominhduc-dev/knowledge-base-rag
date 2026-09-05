@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Xác thực — phụ lục A của THIET-KE-HE-THONG.md, mục 2 của docs/phan-quyen.md.
 //
-// Hệ thống KHÔNG có đăng ký. Tài khoản do ADMIN cấp. Đừng thêm hàm register vào
+// Hệ thống KHÔNG có đăng ký. Tài khoản do SYSTEM_ADMIN cấp. Đừng thêm hàm register vào
 // file này: cho tự đăng ký kèm tự chọn khoa là vô hiệu hóa cách ly phạm vi ngay
 // tại cửa vào, trong khi bộ kiểm thử vẫn xanh vì nó dùng tài khoản seed.
 // ---------------------------------------------------------------------------
@@ -10,7 +10,7 @@ import type { MemberRole } from "@prisma/client";
 import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
 import { accountDisabled, unauthenticated, validationError } from "../../lib/errors.js";
-import { effectiveRole, ROLE_LABEL } from "../../lib/roles.js";
+import { effectiveRole, ROLE_LABEL, PROGRAM_CODE, PROGRAM_LABEL } from "../../lib/roles.js";
 import { signToken } from "../../middleware/auth.middleware.js";
 import type { AuthenticatedUser } from "../../types/express.js";
 import type { ChangePasswordInput, LoginInput } from "./auth.schema.js";
@@ -30,7 +30,7 @@ export type UserDto = {
   email: string;
   role: string; // nhãn hiển thị
   roleCode: MemberRole; // vai hiệu dụng, dùng cho logic
-  /// Chuỗi hiển thị gọn: ADMIN là "Toàn trường", còn lại là tên các đơn vị.
+  /// Cùng phạm vi CNTT cho cả ba vai.
   scope: string;
 };
 
@@ -42,10 +42,7 @@ export function toUserDto(user: AuthenticatedUser): UserDto {
     email: user.email,
     role: ROLE_LABEL[user.role],
     roleCode: user.role,
-    scope:
-      user.role === "ADMIN"
-        ? "Toàn trường"
-        : (user.departments.map((d) => d.name).join(" · ") || "Chưa gán đơn vị"),
+    scope: PROGRAM_LABEL,
   };
 }
 
@@ -73,6 +70,7 @@ function buildAccountFilter(account: string) {
 }
 
 const CHON_THANH_VIEN = {
+  where: { department: { code: PROGRAM_CODE } },
   select: {
     role: true,
     department: { select: { id: true, code: true, name: true } },
@@ -110,6 +108,7 @@ export async function login(
   // Kiểm isActive SAU khi đã xác nhận mật khẩu đúng. Kiểm trước thì bất kỳ ai
   // cũng dò được tài khoản nào đang bị khóa mà không cần biết mật khẩu.
   if (!user.isActive) throw accountDisabled();
+  if (user.memberships.length === 0) throw unauthenticated("Tài khoản chưa được cấp quyền sử dụng hệ thống CNTT.");
 
   await prisma.user.update({
     where: { id: user.id },

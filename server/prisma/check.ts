@@ -54,7 +54,7 @@ const BANG_MONG_DOI = [
 ];
 
 async function main(): Promise<void> {
-  console.log("\nKiểm chứng lược đồ Tàng Thư\n");
+  console.log("\nKiểm chứng lược đồ Sổ Tay Sinh Viên CNTT\n");
 
   // --- 1. Bảng --------------------------------------------------------------
   console.log("1. Bảng");

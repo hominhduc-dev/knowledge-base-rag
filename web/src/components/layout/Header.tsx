@@ -9,9 +9,9 @@ export function Header({ section }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-base/95 backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-[1184px] items-center gap-6 px-6 sm:px-8">
-        <Link href="/chat" className="flex items-center gap-2.5 no-underline">
+        <Link href="/chat" className="flex min-w-0 items-center gap-2.5 no-underline">
           <Image src="/logo-dau.png" alt="DAU" width={28} height={28} />
-          <span className="font-serif text-lg font-semibold">Tàng Thư</span>
+          <span className="truncate font-serif text-base font-semibold sm:text-lg">Sổ Tay Sinh Viên CNTT</span>
         </Link>
         <nav className="hidden items-center gap-1 sm:flex" aria-label="Điều hướng chính">
           <Link href="/chat" className="rounded-[8px] px-3 py-2 text-sm text-secondary no-underline hover:bg-sunken">Hỏi đáp</Link>

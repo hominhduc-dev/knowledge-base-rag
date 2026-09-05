@@ -24,7 +24,7 @@ export const suaNguoiDungSchema = z.object({
 
 export const doiVaiSchema = z.object({
   userId: uuid,
-  roleCode: z.enum(MemberRole, { error: "Vai phải là STUDENT hoặc ADMIN" }),
+  roleCode: z.enum(MemberRole, { error: "Vai phải là USER, CONTENT_ADMIN hoặc SYSTEM_ADMIN" }),
 });
 
 export type UserQuery = z.infer<typeof userQuerySchema>;

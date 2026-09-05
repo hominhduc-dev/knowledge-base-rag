@@ -143,27 +143,20 @@ export function UserTable() {
                             <span className="rounded-[4px] bg-indigo-soft px-2 py-1 text-[13px] font-medium leading-[18px] text-indigo">
                               {m.name}
                             </span>
-                            <button
-                              type="button"
-                              disabled={khoa || (laToi && m.roleCode === "ADMIN")}
-                              title={
-                                laToi && m.roleCode === "ADMIN"
-                                  ? "Không thể tự hạ vai của chính mình"
-                                  : `Đổi thành ${m.roleCode === "ADMIN" ? "sinh viên" : "quản trị viên"}`
-                              }
-                              onClick={() =>
-                                xuLy(user.id, () =>
-                                  doiVai(
-                                    m.departmentId,
-                                    user.id,
-                                    m.roleCode === "ADMIN" ? "STUDENT" : "ADMIN",
-                                  ),
-                                )
-                              }
-                              className="min-h-8 rounded-[6px] border border-border-strong px-2 text-[13px] leading-5 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                            <select
+                              aria-label={`Vai của ${user.name}`}
+                              value={m.roleCode}
+                              disabled={khoa || laToi}
+                              onChange={(event) => {
+                                const role = event.target.value as typeof m.roleCode;
+                                void xuLy(user.id, () => doiVai(m.departmentId, user.id, role));
+                              }}
+                              className="min-h-8 rounded-[6px] border border-border-strong px-2 text-[13px] disabled:opacity-50"
                             >
-                              {nhanVai(m.roleCode)}
-                            </button>
+                              <option value="USER">{nhanVai("USER")}</option>
+                              <option value="CONTENT_ADMIN">{nhanVai("CONTENT_ADMIN")}</option>
+                              <option value="SYSTEM_ADMIN">{nhanVai("SYSTEM_ADMIN")}</option>
+                            </select>
                           </li>
                         ))}
                       </ul>

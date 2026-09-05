@@ -20,9 +20,9 @@ export type GoldenQuestion = {
   question: string;
   /**
    * Mã đơn vị của người hỏi giả định. `null` nghĩa là câu hỏi không phụ thuộc
-   * đơn vị — dùng tài khoản ADMIN.
+   * đơn vị — vẫn dùng phạm vi CNTT và quy định chung.
    */
-  asker: "CNTT" | "KTR" | "XD" | null;
+  asker: "CNTT" | null;
   /**
    * Chuỗi nhận dạng các đoạn ĐÁNG LẼ phải được truy hồi. Mỗi chuỗi phải khớp
    * ĐÚNG MỘT đoạn trong cơ sở dữ liệu.
@@ -34,7 +34,7 @@ export type GoldenQuestion = {
 };
 
 export const BO_CAU_HOI_VANG: GoldenQuestion[] = [
-  // --- Cặp đối chứng: cùng câu hỏi, hai khoa, hai đáp án ---------------------
+  // --- Quy định học tập ngành CNTT ---------------------
   {
     code: "DOAN-CNTT",
     question: "Em cần bao nhiêu tín chỉ mới được làm khóa luận ra trường?",
@@ -43,23 +43,10 @@ export const BO_CAU_HOI_VANG: GoldenQuestion[] = [
     note: "Cặp đối chứng. Câu hỏi dùng 'khóa luận', tài liệu dùng 'đồ án'.",
   },
   {
-    code: "DOAN-KTR",
-    question: "Em cần bao nhiêu tín chỉ mới được làm khóa luận ra trường?",
-    asker: "KTR",
-    gold: ["tối thiểu 90 tín chỉ"],
-    note: "Cùng câu hỏi với DOAN-CNTT nhưng đáp án khác — kiểm cách ly phạm vi.",
-  },
-  {
     code: "DOAN-DIEUKIEN-CNTT",
     question: "Nợ môn thì có được nhận đồ án không?",
     asker: "CNTT",
     gold: ["không nợ quá 02 học phần bắt buộc"],
-  },
-  {
-    code: "DOAN-BANVE-KTR",
-    question: "Làm đồ án ngành xây dựng có phải nộp bản vẽ không?",
-    asker: "KTR",
-    gold: ["bản vẽ kỹ thuật"],
   },
 
   // --- Tốt nghiệp -----------------------------------------------------------
@@ -208,22 +195,8 @@ export const BO_CAU_HOI_VANG: GoldenQuestion[] = [
     asker: "CNTT",
     gold: [],
     note:
-      "Sinh viên CNTT hỏi về quy định Khoa Kiến trúc. Đáp án tồn tại trong CSDL " +
+      "Sinh viên CNTT hỏi về quy định Khoa Kiến trúc. Dữ liệu ngành khác, nếu còn trong CSDL cũ, " +
       "nhưng NGOÀI phạm vi người hỏi — hệ thống phải từ chối, không được trả 90 tín chỉ.",
-  },
-  {
-    code: "CACHLY-KTR-HOI-CNTT",
-    question: "Quy định đồ án của khoa công nghệ thông tin thế nào?",
-    asker: "KTR",
-    gold: [],
-    note: "Chiều ngược lại. Không được trả 105 tín chỉ.",
-  },
-  {
-    code: "CACHLY-XD-HOI-DOAN",
-    question: "Điều kiện nhận đồ án tốt nghiệp của khoa em là gì?",
-    asker: "XD",
-    gold: [],
-    note: "Khoa Xây dựng chưa có tài liệu đồ án riêng — phải từ chối.",
   },
 
   // --- NGOÀI KHO TÀI LIỆU: bắt buộc từ chối --------------------------------

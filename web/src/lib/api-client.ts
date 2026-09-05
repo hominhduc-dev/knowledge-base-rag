@@ -87,7 +87,7 @@ export async function apiClient<T>(path: string, init: RequestInit = {}): Promis
     // mã lỗi, nên tự dựng một `ApiError` cho phía gọi xử lý đồng nhất.
     throw new ApiError(
       "NETWORK_ERROR",
-      "Không kết nối được máy chủ Tàng Thư. Kiểm tra xem API đã chạy chưa.",
+      "Không kết nối được máy chủ Sổ Tay Sinh Viên CNTT. Kiểm tra xem API đã chạy chưa.",
       0,
     );
   }

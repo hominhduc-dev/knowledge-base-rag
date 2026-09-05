@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { useCurrentUser } from "@/features/auth/useAuth";
 import { cn } from "@/lib/utils";
-import { DepartmentForm } from "./DepartmentForm";
 import { PermissionMatrix } from "./PermissionMatrix";
 import { UserTable } from "./UserTable";
 
 export type AdminTab = "departments" | "users" | "permissions";
 
 const tabs: { key: AdminTab; label: string; href: string }[] = [
-  { key: "departments", label: "Cây đơn vị", href: "/admin/departments" },
   { key: "users", label: "Người dùng", href: "/admin/users" },
   { key: "permissions", label: "Ma trận quyền", href: "/admin/permissions" },
 ];
@@ -24,16 +22,15 @@ export function AdminDashboard({ activeTab }: { activeTab: AdminTab }) {
   //
   // Riêng "Ma trận quyền" vẫn cho xem: nó là bảng tra cứu tĩnh, không gọi API,
   // và biết ai được làm gì là thông tin nên công khai.
-  const laQuanTri = user?.roleCode === "ADMIN";
+  const laQuanTri = user?.roleCode === "SYSTEM_ADMIN";
   const tabsHienThi = laQuanTri ? tabs : tabs.filter((t) => t.key === "permissions");
-  const tabDangXem = laQuanTri || activeTab === "permissions" ? activeTab : null;
+  const tabDangXem = laQuanTri ? (activeTab === "departments" ? "users" : activeTab) : activeTab === "permissions" ? activeTab : null;
 
   return (
     <section className="mx-auto w-full max-w-[1120px] px-6 pb-20 pt-10 sm:px-8">
-      <h1 className="font-serif text-[30px] font-semibold leading-[38px]">Đơn vị và phân quyền</h1>
+      <h1 className="font-serif text-[30px] font-semibold leading-[38px]">Tài khoản và phân quyền</h1>
       <p className="mt-2 max-w-[64ch] text-[15px] leading-[26px] text-secondary">
-        Phạm vi tài liệu của mỗi người dùng được suy ra từ đơn vị và vai; tài liệu toàn trường luôn
-        nằm trong phạm vi của mọi người.
+        Hệ thống phục vụ sinh viên ngành Công nghệ Thông tin. Ba vai trò gồm Sinh Viên CNTT, Giáo vụ khoa CNTT và Quản Trị Viên.
       </p>
       <nav className="mt-7 flex gap-1 overflow-x-auto border-b border-border" aria-label="Quản trị">
         {tabsHienThi.map((tab) => (
@@ -62,7 +59,6 @@ export function AdminDashboard({ activeTab }: { activeTab: AdminTab }) {
           xem được <Link href="/admin/permissions">ma trận quyền</Link> để biết mỗi vai làm được gì.
         </p>
       )}
-      {tabDangXem === "departments" && <DepartmentForm />}
       {tabDangXem === "users" && <UserTable />}
       {tabDangXem === "permissions" && <PermissionMatrix />}
     </section>

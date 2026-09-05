@@ -77,24 +77,9 @@ export function LoginForm() {
         {dangGui ? "Đang đăng nhập…" : "Đăng nhập"}
       </Button>
 
-      <div className="my-3 flex items-center gap-3.5 text-[13px] text-muted" aria-hidden="true">
-        <span className="h-px flex-1 bg-border" />
-        <span>hoặc</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
-
-      {/* Đăng nhập một lần với hệ thống trường nằm ngoài phạm vi đồ án (Mục 3).
-          Giữ nút cho đúng thiết kế nhưng vô hiệu hóa — trước đây nút này bỏ qua
-          hoàn toàn bước nhập tài khoản, tức là một cửa hậu vào hệ thống. */}
-      <Button type="button" variant="outline" className="w-full font-medium" disabled>
-        Đăng nhập một lần (SSO) của trường
-      </Button>
-      <p className="mt-1.5 text-center text-[13px] leading-5 text-muted">Chưa hỗ trợ trong bản này.</p>
-
-      <div className="mt-3 flex justify-between gap-4 text-sm leading-[22px]">
-        <a href="#">Quên mật khẩu</a>
-        <a href="#">Hỗ trợ tài khoản</a>
-      </div>
+      <p className="mt-3 text-center text-[13px] leading-5 text-muted">
+        Liên hệ quản trị viên khi cần cấp tài khoản hoặc hỗ trợ đăng nhập.
+      </p>
     </form>
   );
 }

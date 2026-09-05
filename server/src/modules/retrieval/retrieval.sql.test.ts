@@ -25,7 +25,7 @@ function parseVector(text: string): number[] {
 
 async function adminUser(): Promise<AuthenticatedUser> {
   const department = await prisma.department.findUniqueOrThrow({
-    where: { code: "PDT" },
+    where: { code: "CNTT" },
     select: { id: true, code: true, name: true },
   });
 
@@ -33,9 +33,9 @@ async function adminUser(): Promise<AuthenticatedUser> {
     id: "00000000-0000-4000-8000-000000000000",
     code: null,
     email: "test-admin@dau.edu.vn",
-    fullName: "Người dùng thử ADMIN",
-    role: MemberRole.ADMIN,
-    departments: [{ ...department, role: MemberRole.ADMIN }],
+    fullName: "Người dùng thử SYSTEM_ADMIN",
+    role: MemberRole.SYSTEM_ADMIN,
+    departments: [{ ...department, role: MemberRole.SYSTEM_ADMIN }],
     departmentIds: [department.id],
   };
 }

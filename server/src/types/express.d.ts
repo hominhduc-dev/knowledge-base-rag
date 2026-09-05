@@ -20,11 +20,10 @@ export type AuthenticatedUser = {
   email: string;
   fullName: string;
 
-  /// Vai HIỆU DỤNG, gộp từ mọi tư cách thành viên — xem `lib/roles.ts`.
+  /// Vai hiệu dụng từ tư cách CNTT đã lọc ở backend — xem `lib/roles.ts`.
   role: MemberRole;
 
-  /// Mọi đơn vị người này thuộc về. ĐÂY là thứ quyết định phạm vi nhìn thấy,
-  /// không phải `role`. Đọc qua `lib/scope.ts`, đừng dùng trực tiếp.
+  /// Chỉ chứa tư cách CNTT. Dùng `lib/scope.ts` để đọc phạm vi tài liệu.
   departments: UserDepartment[];
   departmentIds: string[];
 };

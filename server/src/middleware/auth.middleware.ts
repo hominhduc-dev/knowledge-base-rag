@@ -2,7 +2,7 @@
 // Đọc `Authorization: Bearer <token>` → nạp người dùng → gán vào req.user.
 //
 // Token CHỈ mang `sub` là id người dùng. Vai và đơn vị đọc lại từ cơ sở dữ liệu
-// ở mỗi request, có chủ đích: nếu nhét `role` vào token thì ADMIN hạ vai một
+// ở mỗi request, có chủ đích: nếu nhét `role` vào token thì SYSTEM_ADMIN hạ vai một
 // người sẽ không có tác dụng cho tới khi token cũ hết hạn — tức là tối đa 7
 // ngày còn nguyên quyền cũ. Vô hiệu hóa tài khoản cũng vậy. Cái giá là một
 // truy vấn theo khóa chính mỗi request, chấp nhận được.
@@ -13,7 +13,7 @@ import type { SignOptions } from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { accountDisabled, unauthenticated } from "../lib/errors.js";
-import { effectiveRole } from "../lib/roles.js";
+import { effectiveRole, PROGRAM_CODE } from "../lib/roles.js";
 
 type TokenPayload = { sub: string };
 
@@ -65,6 +65,7 @@ export async function requireAuth(
         // Nạp luôn tư cách thành viên: đây là thứ quyết định phạm vi, và mọi
         // request đều cần tới nên tách ra truy vấn riêng chỉ tốn thêm một vòng.
         memberships: {
+          where: { department: { code: PROGRAM_CODE } },
           select: {
             role: true,
             department: { select: { id: true, code: true, name: true } },
@@ -77,6 +78,7 @@ export async function requireAuth(
     // phải NOT_FOUND — phía gọi chỉ cần biết là phải đăng nhập lại.
     if (!user) throw unauthenticated();
     if (!user.isActive) throw accountDisabled();
+    if (user.memberships.length === 0) throw unauthenticated("Tài khoản chưa được cấp quyền sử dụng hệ thống CNTT.");
 
     const departments = user.memberships.map((m) => ({
       id: m.department.id,

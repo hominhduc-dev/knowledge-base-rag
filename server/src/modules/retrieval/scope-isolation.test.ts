@@ -1,185 +1,153 @@
-// ---------------------------------------------------------------------------
-// KIỂM THỬ CÁCH LY PHẠM VI — mốc sống còn của Sprint 3.
-//
-// Chạy:  corepack pnpm --filter @tang-thu/server run test
-// Yêu cầu: Postgres đang chạy (`docker compose up -d db`) và đã seed.
-//
-// Đây là bộ kiểm thử được đặt làm ĐIỀU KIỆN CHẶN MERGE. Rủi ro rò rỉ phạm vi là
-// rủi ro nghiêm trọng nhất của sản phẩm: nó im lặng, không gây lỗi, và chỉ lộ ra
-// khi có người thấy tài liệu không thuộc về mình.
-//
-// Cặp đối chứng trong dữ liệu mồi được dựng riêng cho bộ này:
-//
-//   88/QĐ-CNTT  (Khoa CNTT)      → nhận đồ án khi tích lũy 105 tín chỉ
-//   77/QĐ-KTR   (Khoa Kiến trúc) → nhận đồ án khi tích lũy  90 tín chỉ
-//
-// Cùng chủ đề, KHÁC CON SỐ. Sinh viên CNTT nhận được con số 90 tức là đã rò rỉ —
-// con số khác nhau khiến lỗi lộ ra ngay, không cần đọc kỹ nội dung.
-//
-// Điểm mấu chốt: bộ này khẳng định KHÔNG CÓ ĐOẠN VĂN NÀO của khoa khác lọt vào
-// tập kết quả, chứ không chỉ kiểm câu trả lời cuối cùng. Câu trả lời có thể vô
-// tình đúng trong khi truy hồi đã rò rỉ.
-// ---------------------------------------------------------------------------
 import assert from "node:assert/strict";
+import { randomUUID, createHash } from "node:crypto";
 import { after, before, describe, it } from "node:test";
-import { MemberRole, Prisma, PrismaClient } from "@prisma/client";
-import { scopeSql } from "../../lib/scope.js";
+import type { Server } from "node:http";
+import bcrypt from "bcryptjs";
+import { MemberRole } from "@prisma/client";
+import { prisma } from "../../config/prisma.js";
+import { createApp } from "../../app.js";
+import { scopeSql, scopeWhere } from "../../lib/scope.js";
+import { effectiveRole } from "../../lib/roles.js";
+import { signToken } from "../../middleware/auth.middleware.js";
 import type { AuthenticatedUser } from "../../types/express.js";
+import * as documents from "../documents/documents.service.js";
+import * as admin from "../admin/admin.service.js";
+import { login } from "../auth/auth.service.js";
 
-const prisma = new PrismaClient();
-
-type ChunkRow = { id: string; content: string; department_id: string | null };
-
-/**
- * Truy vấn tìm kiếm toàn văn có lọc phạm vi.
- *
- * Đây là bản rút gọn của nhánh từ khóa trong truy vấn lai ở mục 4.1 tài liệu
- * thiết kế. Nhánh vector chưa dùng được vì 13 đoạn mồi chưa có vector nhúng
- * (chờ khóa Gemini), nhưng ĐIỀU KIỆN LỌC PHẠM VI thì giống hệt — và đó chính là
- * thứ bộ kiểm thử này nhắm tới.
- */
-async function timKiem(user: AuthenticatedUser, cauHoi: string): Promise<ChunkRow[]> {
-  // `plainto_tsquery` nối MỌI từ bằng AND, nên với câu hỏi tự nhiên nó gần như
-  // luôn trả rỗng. Đổi '&' thành '|' để thành OR — đã kiểm chứng là cần thiết.
-  const tsquery = Prisma.sql`replace(plainto_tsquery('simple', ${cauHoi})::text, '&', '|')::tsquery`;
-
-  return prisma.$queryRaw<ChunkRow[]>`
-    SELECT c."id", c."content", c."department_id"
-    FROM "chunks" c
-    WHERE ${scopeSql(user, "c")}
-      AND c."content_tsv" @@ ${tsquery}
-    ORDER BY ts_rank(c."content_tsv", ${tsquery}) DESC
-    LIMIT 20
-  `;
-}
-
-/** Dựng một người dùng giả từ mã đơn vị đã seed. */
-async function nguoiDung(
-  deptCode: string | null,
-  role: MemberRole,
-): Promise<AuthenticatedUser> {
-  const departments = deptCode
-    ? [
-        await prisma.department
-          .findUniqueOrThrow({ where: { code: deptCode }, select: { id: true, code: true, name: true } })
-          .then((d) => ({ ...d, role })),
-      ]
-    : [];
-
-  return {
-    id: "00000000-0000-4000-8000-000000000000",
-    code: null,
-    email: `test-${deptCode ?? "admin"}@dau.edu.vn`,
-    fullName: `Người dùng thử ${deptCode ?? "ADMIN"}`,
-    role,
-    departments,
-    departmentIds: departments.map((d) => d.id),
-  };
-}
-
-describe("Cách ly phạm vi giữa các đơn vị", () => {
-  let svCNTT: AuthenticatedUser;
-  let svKTR: AuthenticatedUser;
-  let admin: AuthenticatedUser;
-  let idCNTT: string;
-  let idKTR: string;
+// Fixture có ghi dữ liệu: chỉ chạy trong DB thử nghiệm riêng.
+const isolated = new URL(process.env.DATABASE_URL ?? "postgresql://localhost/none").pathname.startsWith("/tangthu_cntt_test_");
+describe("CNTT — ba vai, quyền tài liệu và quyền tài khoản", { skip: !isolated }, () => {
+  const tag = randomUUID().slice(0, 8);
+  const users = {} as Record<MemberRole, AuthenticatedUser>;
+  let outsideUser: AuthenticatedUser;
+  let outsideId: string;
+  let departmentId: string;
+  let docIds: string[] = [];
+  let accountIds: string[] = [];
+  let server: Server;
+  let base: string;
+  const hash = (s: string) => createHash("sha256").update(s).digest("hex");
+  const hasCode = (code: string) => (error: unknown) => (error as { code?: string }).code === code;
 
   before(async () => {
-    svCNTT = await nguoiDung("CNTT", MemberRole.STUDENT);
-    svKTR = await nguoiDung("KTR", MemberRole.STUDENT);
-    admin = await nguoiDung("PDT", MemberRole.ADMIN);
-    idCNTT = svCNTT.departmentIds[0]!;
-    idKTR = svKTR.departmentIds[0]!;
-
-    // Nếu chưa seed thì mọi khẳng định bên dưới sẽ "đạt" một cách vô nghĩa vì
-    // tập rỗng thỏa mãn mọi điều kiện phủ định. Chặn trường hợp đó ngay.
-    const soDoan = await prisma.chunk.count();
-    assert.ok(soDoan > 0, "cơ sở dữ liệu chưa có đoạn văn nào — chạy `pnpm db:seed` trước");
+    const dept = await prisma.department.findUniqueOrThrow({ where: { code: "CNTT" } });
+    departmentId = dept.id;
+    const outside = await prisma.department.create({ data: { code: `TEST_${tag}`, name: "Ngoài CNTT", type: "FACULTY" } });
+    outsideId = outside.id;
+    const passwordHash = await bcrypt.hash("Test-only-password-123", 4);
+    async function makeUser(role: MemberRole, other = false): Promise<AuthenticatedUser> {
+      const d = other ? outside : dept;
+      const u = await prisma.user.create({ data: {
+        email: `${tag}-${role}-${other}@test.invalid`.toLowerCase(), fullName: `Test ${role}`, passwordHash,
+        memberships: { create: { departmentId: d.id, role } },
+      } });
+      accountIds.push(u.id);
+      return { id: u.id, code: null, email: u.email, fullName: u.fullName, role,
+        departments: [{ id: d.id, code: d.code, name: d.name, role }], departmentIds: [d.id] };
+    }
+    for (const role of Object.values(MemberRole)) users[role] = await makeUser(role);
+    outsideUser = await makeUser(MemberRole.SYSTEM_ADMIN, true);
+    for (const [index, id] of [null, departmentId, outsideId].entries()) {
+      const doc = await prisma.document.create({ data: {
+        title: `Fixture ${tag} ${index}`, departmentId: id, sourceType: "PDF", filePath: `fixture-${tag}.pdf`,
+        fileHash: hash(`${tag}-${index}`), uploadedById: users.SYSTEM_ADMIN.id, status: "FAILED",
+        chunks: { create: { chunkIndex: 0, content: `CNTT fixture ${index}`, contentHash: hash(`${tag}-chunk-${index}`),
+          tokenCount: 4, visibility: 1, departmentId: id } },
+      } });
+      docIds.push(doc.id);
+    }
+    server = createApp().listen(0, "127.0.0.1");
+    await new Promise<void>((resolve) => server.once("listening", resolve));
+    const address = server.address();
+    assert.ok(address && typeof address !== "string");
+    base = `http://127.0.0.1:${address.port}/api`;
   });
-
   after(async () => {
+    if (server) await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    await prisma.document.deleteMany({ where: { id: { in: docIds } } });
+    await prisma.user.deleteMany({ where: { id: { in: accountIds } } });
+    if (outsideId) await prisma.department.delete({ where: { id: outsideId } });
     await prisma.$disconnect();
   });
 
-  // --- Trường hợp 1: quan trọng nhất và dễ bỏ sót nhất ----------------------
-  it("sinh viên CNTT hỏi về đồ án — KHÔNG đoạn nào của Kiến trúc lọt vào", async () => {
-    const ketQua = await timKiem(svCNTT, "điều kiện nhận đồ án tốt nghiệp tín chỉ");
-
-    const roRi = ketQua.filter((r) => r.department_id === idKTR);
-    assert.equal(roRi.length, 0, `rò rỉ ${roRi.length} đoạn của Khoa Kiến trúc`);
-
-    // Và khẳng định theo NỘI DUNG, không chỉ theo khóa ngoại — phòng trường hợp
-    // cột department_id bị lệch với tài liệu gốc.
-    const noiDung = ketQua.map((r) => r.content).join(" ");
-    assert.ok(!noiDung.includes("90 tín chỉ"), "thấy con số của Khoa Kiến trúc");
-    assert.ok(noiDung.includes("105 tín chỉ"), "phải thấy con số của chính khoa mình");
+  for (const role of Object.values(MemberRole)) {
+    it(`${role}: Prisma và SQL chỉ trả CNTT + tài liệu chung`, async () => {
+      const user = users[role];
+      const orm = await prisma.document.findMany({ where: { id: { in: docIds }, AND: [scopeWhere(user)] }, select: { id: true } });
+      const sql = await prisma.$queryRaw<{ document_id: string }[]>`SELECT c.document_id FROM chunks c WHERE ${scopeSql(user)} AND c.document_id = ANY(${docIds}::uuid[])`;
+      const expected = docIds.slice(0, 2).sort();
+      assert.deepEqual(orm.map((d) => d.id).sort(), expected);
+      assert.deepEqual(sql.map((d) => d.document_id).sort(), expected);
+    });
+    it(`${role}: không mở hoặc sửa tài liệu ngoài ngành bằng id`, async () => {
+      await assert.rejects(documents.getFile(docIds[2]!, users[role]), hasCode("FORBIDDEN_SCOPE"));
+      await assert.rejects(documents.update(docIds[2]!, { title: "Không được sửa" }, users[role]),
+        hasCode(role === "USER" ? "FORBIDDEN_ROLE" : "FORBIDDEN_SCOPE"));
+    });
+  }
+  it("USER không thể upload, xóa hay retry qua service", async () => {
+    await assert.rejects(documents.create({} as Express.Multer.File, "PDF", { title: "Forbidden" }, users.USER), hasCode("FORBIDDEN_ROLE"));
+    await assert.rejects(documents.remove(docIds[0]!, users.USER), hasCode("FORBIDDEN_ROLE"));
+    await assert.rejects(documents.retry(docIds[1]!, users.USER), hasCode("FORBIDDEN_ROLE"));
   });
-
-  // --- Trường hợp 2: chiều ngược lại ----------------------------------------
-  // Chỉ kiểm một chiều thì bộ kiểm thử có thể xanh trong khi vẫn rò rỉ chiều kia.
-  it("sinh viên Kiến trúc hỏi đúng câu đó — KHÔNG đoạn nào của CNTT lọt vào", async () => {
-    const ketQua = await timKiem(svKTR, "điều kiện nhận đồ án tốt nghiệp tín chỉ");
-
-    const roRi = ketQua.filter((r) => r.department_id === idCNTT);
-    assert.equal(roRi.length, 0, `rò rỉ ${roRi.length} đoạn của Khoa CNTT`);
-
-    const noiDung = ketQua.map((r) => r.content).join(" ");
-    assert.ok(!noiDung.includes("105 tín chỉ"), "thấy con số của Khoa CNTT");
-    assert.ok(noiDung.includes("90 tín chỉ"), "phải thấy con số của chính khoa mình");
+  it("CONTENT_ADMIN sửa và retry được; không chuyển/tạo tài liệu sang khoa khác", async () => {
+    const updated = await documents.update(docIds[1]!, { title: "Đã sửa bởi quản trị nội dung" }, users.CONTENT_ADMIN);
+    assert.equal(updated.canEdit, true);
+    assert.ok((await documents.retry(docIds[1]!, users.CONTENT_ADMIN)).jobId);
+    await assert.rejects(documents.update(docIds[1]!, { departmentId: outsideId }, users.CONTENT_ADMIN), hasCode("FORBIDDEN_SCOPE"));
+    await assert.rejects(documents.create({} as Express.Multer.File, "PDF", { title: "Outside", departmentId: outsideId }, users.SYSTEM_ADMIN), hasCode("FORBIDDEN_SCOPE"));
   });
-
-  // --- Trường hợp 3: tài liệu toàn trường ai cũng đọc được ------------------
-  it("hai sinh viên khác khoa cùng nhận được quy chế toàn trường", async () => {
-    const cauHoi = "điều kiện xét công nhận tốt nghiệp";
-    const a = await timKiem(svCNTT, cauHoi);
-    const b = await timKiem(svKTR, cauHoi);
-
-    const toanTruongA = a.filter((r) => r.department_id === null).map((r) => r.id).sort();
-    const toanTruongB = b.filter((r) => r.department_id === null).map((r) => r.id).sort();
-
-    assert.ok(toanTruongA.length > 0, "không tìm thấy đoạn toàn trường nào");
-    assert.deepEqual(toanTruongA, toanTruongB, "hai khoa phải nhận cùng bộ đoạn toàn trường");
+  it("CONTENT_ADMIN không liệt kê tài khoản, khóa hay cấp quyền", async () => {
+    await assert.rejects(admin.danhSachNguoiDung({ page: 1, pageSize: 10 }, users.CONTENT_ADMIN), hasCode("FORBIDDEN_ROLE"));
+    await assert.rejects(admin.suaNguoiDung(users.USER.id, { isActive: false }, users.CONTENT_ADMIN), hasCode("FORBIDDEN_ROLE"));
+    await assert.rejects(admin.ganThanhVien(departmentId, { userId: users.USER.id, roleCode: "SYSTEM_ADMIN" }, users.CONTENT_ADMIN), hasCode("FORBIDDEN_ROLE"));
   });
-
-  // --- Trường hợp 4: ADMIN thấy tất cả --------------------------------------
-  it("ADMIN thấy được đoạn của cả hai khoa", async () => {
-    const ketQua = await timKiem(admin, "điều kiện nhận đồ án tốt nghiệp tín chỉ");
-    const noiDung = ketQua.map((r) => r.content).join(" ");
-
-    assert.ok(noiDung.includes("105 tín chỉ"), "ADMIN phải thấy tài liệu CNTT");
-    assert.ok(noiDung.includes("90 tín chỉ"), "ADMIN phải thấy tài liệu Kiến trúc");
+  it("SYSTEM_ADMIN chỉ thấy và quản lý tài khoản CNTT", async () => {
+    const result = await admin.danhSachNguoiDung({ page: 1, pageSize: 100 }, users.SYSTEM_ADMIN);
+    assert.ok(result.items.some((u) => u.id === users.USER.id));
+    assert.ok(!result.items.some((u) => u.id === outsideUser.id));
+    assert.ok(result.items.every((u) => u.memberships.every((m) => m.code === "CNTT")));
+    await assert.rejects(admin.suaNguoiDung(outsideUser.id, { isActive: false }, users.SYSTEM_ADMIN), hasCode("NOT_FOUND"));
   });
-
-  // --- Trường hợp 5: bộ lọc nằm trong SQL, không phải ở tầng ứng dụng -------
-  it("truy vấn KHÔNG lọc trả về nhiều hơn — chứng minh bộ lọc thật sự có tác dụng", async () => {
-    // Nếu `scopeSql` vô tình trả TRUE cho sinh viên thì bốn test trên vẫn có thể
-    // xanh khi dữ liệu thưa. Phép so sánh này bắt đúng trường hợp đó.
-    const coLoc = await timKiem(svCNTT, "điều kiện nhận đồ án tốt nghiệp tín chỉ");
-    const khongLoc = await prisma.$queryRaw<{ n: bigint }[]>`
-      SELECT count(*) AS n
-      FROM "chunks" c
-      WHERE c."content_tsv" @@ replace(
-        plainto_tsquery('simple', ${"điều kiện nhận đồ án tốt nghiệp tín chỉ"})::text, '&', '|')::tsquery
-    `;
-
-    const soKhongLoc = Number(khongLoc[0]?.n ?? 0);
-    assert.ok(
-      soKhongLoc > coLoc.length,
-      `bộ lọc phạm vi không loại được gì (${soKhongLoc} so với ${coLoc.length}) — ` +
-        "hoặc dữ liệu mồi thiếu cặp đối chứng, hoặc scopeSql đang trả TRUE",
-    );
+  it("Không tự khóa hoặc tự hạ vai của quản trị hệ thống", async () => {
+    await assert.rejects(admin.suaNguoiDung(users.SYSTEM_ADMIN.id, { isActive: false }, users.SYSTEM_ADMIN), hasCode("VALIDATION_ERROR"));
+    await assert.rejects(admin.ganThanhVien(departmentId, { userId: users.SYSTEM_ADMIN.id, roleCode: "USER" }, users.SYSTEM_ADMIN), hasCode("VALIDATION_ERROR"));
   });
-
-  // --- Trường hợp 6: người chưa được gán đơn vị -----------------------------
-  it("người chưa gán đơn vị chỉ đọc được tài liệu toàn trường", async () => {
-    const treo: AuthenticatedUser = {
-      ...svCNTT,
-      departments: [],
-      departmentIds: [],
-    };
-    const ketQua = await timKiem(treo, "điều kiện tốt nghiệp đồ án tín chỉ");
-
-    const cuaKhoa = ketQua.filter((r) => r.department_id !== null);
-    assert.equal(cuaKhoa.length, 0, "không được thấy tài liệu của bất kỳ khoa nào");
+  it("Tài khoản ngoài ngành không đăng nhập được dù mang vai SYSTEM_ADMIN cũ", async () => {
+    await assert.rejects(login({ account: outsideUser.email, password: "Test-only-password-123" }),
+      (error: unknown) => hasCode("UNAUTHENTICATED")(error) && (error as Error).message.includes("CNTT"));
+    const response = await fetch(`${base}/auth/me`, { headers: { Authorization: `Bearer ${signToken(outsideUser.id)}` } });
+    assert.equal(response.status, 401);
+  });
+  it("Vai quản trị cũ ở khoa khác không nâng quyền của USER tại CNTT", async () => {
+    await prisma.departmentMember.create({ data: { userId: users.USER.id, departmentId: outsideId, role: "SYSTEM_ADMIN" } });
+    const session = await login({ account: users.USER.email, password: "Test-only-password-123" });
+    assert.equal(session.user.roleCode, "USER");
+    assert.deepEqual(session.memberships.map((m) => m.code), ["CNTT"]);
+    const response = await fetch(`${base}/users`, { headers: { Authorization: `Bearer ${session.token}` } });
+    assert.equal(response.status, 403);
+  });
+  it("HTTP cho phép nội dung sửa tài liệu, hệ thống xem tài khoản; USER bị chặn", async () => {
+    const patch = (role: MemberRole) => fetch(`${base}/documents/${docIds[0]}`, {
+      method: "PATCH", headers: { Authorization: `Bearer ${signToken(users[role].id)}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Tài liệu chung đã kiểm qua HTTP" }),
+    });
+    assert.equal((await patch("USER")).status, 403);
+    assert.equal((await patch("CONTENT_ADMIN")).status, 200);
+    assert.equal((await fetch(`${base}/users`, { headers: { Authorization: `Bearer ${signToken(users.SYSTEM_ADMIN.id)}` } })).status, 200);
+  });
+  it("JWT còn hạn không giữ quyền cũ khi quản trị thay vai hoặc khóa tài khoản", async () => {
+    const token = signToken(users.CONTENT_ADMIN.id);
+    const headers = { Authorization: `Bearer ${token}` };
+    assert.equal((await fetch(`${base}/users`, { headers })).status, 403);
+    await admin.ganThanhVien(departmentId, { userId: users.CONTENT_ADMIN.id, roleCode: "USER" }, users.SYSTEM_ADMIN);
+    assert.equal((await fetch(`${base}/documents`, { method: "POST", headers })).status, 403);
+    await admin.suaNguoiDung(users.CONTENT_ADMIN.id, { isActive: false }, users.SYSTEM_ADMIN);
+    assert.equal((await fetch(`${base}/auth/me`, { headers })).status, 403);
+  });
+  it("Vai hiệu dụng ưu tiên SYSTEM_ADMIN > CONTENT_ADMIN > USER", () => {
+    assert.equal(effectiveRole([]), "USER");
+    assert.equal(effectiveRole(["USER", "CONTENT_ADMIN"]), "CONTENT_ADMIN");
+    assert.equal(effectiveRole(["SYSTEM_ADMIN", "CONTENT_ADMIN"]), "SYSTEM_ADMIN");
   });
 });

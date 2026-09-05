@@ -21,8 +21,8 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Tàng Thư", template: "%s · Tàng Thư" },
-  description: "Hệ thống hỏi đáp tri thức học vụ có trích dẫn và phân quyền theo đơn vị.",
+  title: { default: "Sổ Tay Sinh Viên CNTT", template: "%s · Sổ Tay Sinh Viên CNTT" },
+  description: "Hỏi đáp học vụ có trích dẫn cho sinh viên ngành CNTT, Đại học Kiến trúc Đà Nẵng.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

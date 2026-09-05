@@ -1,4 +1,4 @@
-# Khởi tạo Tàng Thư trên máy mới
+# Khởi tạo Sổ Tay Sinh Viên CNTT trên máy mới
 
 Dành cho người vừa clone repo về. Đọc hết mất 5 phút, làm theo mất 15.
 

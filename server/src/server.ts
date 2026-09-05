@@ -18,7 +18,7 @@ const app = createApp();
 const HOST = process.env.HOST ?? "0.0.0.0";
 
 const server = app.listen(env.PORT, HOST, () => {
-  logger.info(`Tàng Thư API đang nghe tại http://${HOST}:${env.PORT}/api`);
+  logger.info(`Sổ Tay Sinh Viên CNTT API đang nghe tại http://${HOST}:${env.PORT}/api`);
 });
 
 // Worker nạp tài liệu chạy trong CÙNG tiến trình — xem ghi chú đầu

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCurrentUser } from "@/features/auth/useAuth";
 
 /**
- * Liên kết "Quản trị" — chỉ hiện với ADMIN.
+ * Liên kết "Quản trị" — chỉ hiện với SYSTEM_ADMIN.
  *
  * Tách riêng thành component khách vì `Header` là component máy chủ, không đọc
  * được phiên trong localStorage.
@@ -15,11 +15,11 @@ import { useCurrentUser } from "@/features/auth/useAuth";
  */
 export function AdminNavLink({ active }: { active: boolean }) {
   const user = useCurrentUser();
-  if (user?.roleCode !== "ADMIN") return null;
+  if (user?.roleCode !== "SYSTEM_ADMIN") return null;
 
   return (
     <Link
-      href="/admin/departments"
+      href="/admin/users"
       className={
         active
           ? "rounded-[8px] bg-sunken px-3 py-2 text-sm font-medium no-underline"
