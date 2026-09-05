@@ -19,6 +19,10 @@ services:
   db:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
+    # Hồ sơ `local`, bật sẵn bằng COMPOSE_PROFILES trong .env ở gốc. Dùng Postgres
+    # trên cloud thì bỏ hồ sơ đó đi và dịch vụ này không khởi động — không có
+    # "hồ sơ phủ định" trong Compose, nên phải làm ngược như vậy.
+    profiles: ["local"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-tangthu}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?thieu POSTGRES_PASSWORD trong .env}
@@ -61,8 +65,10 @@ services:
     env_file:
       - ./server/.env
     environment:
-      # Ghi đè: trong mạng Docker, máy chủ CSDL tên là `db`, không phải localhost.
-      DATABASE_URL: postgresql://${POSTGRES_USER:-tangthu}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tangthu}
+      # Đặt DATABASE_URL trong .env ở GỐC để trỏ sang Postgres cloud. Bỏ trống thì
+      # dùng mặc định dưới đây: trong mạng Docker máy chủ CSDL tên là `db`, không
+      # phải localhost — đó là lý do không thể để `server/.env` tự quyết.
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-tangthu}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tangthu}}
       NODE_ENV: production
       PORT: "4000"
       # Trình duyệt gọi API qua Caddy ở cùng gốc, nên không cần liệt kê IP LAN.
@@ -70,6 +76,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        # Chế độ cloud không bật dịch vụ `db`; thiếu dòng này Compose sẽ báo lỗi
+        # "service db is required but not enabled by profile" và không chạy được.
+        required: false
     volumes:
       - uploads:/app/uploads
     expose:
