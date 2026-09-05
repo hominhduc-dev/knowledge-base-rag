@@ -1,48 +1,111 @@
 # Trạng thái — Sổ Tay Sinh Viên CNTT
 
-**Cập nhật: 05/09/2026.** Học phần Lập trình mạng máy tính. Đối tượng duy nhất: sinh viên ngành CNTT, Trường Đại học Kiến trúc Đà Nẵng.
+**Cập nhật: 05/09/2026, sau khi triển khai.** Học phần Lập trình mạng máy tính. Đối tượng duy nhất: sinh viên ngành CNTT, Trường Đại học Kiến trúc Đà Nẵng.
 
-Nguồn yêu cầu hiện hành: [PHAM-VI-CNTT.md](../docs/PHAM-VI-CNTT.md). Đã chốt giữ ba vai, không triển khai phạm vi đa khoa.
+Nguồn yêu cầu hiện hành: [PHAM-VI-CNTT.md](../docs/PHAM-VI-CNTT.md). Ba vai đã chốt, không triển khai phạm vi đa khoa.
+
+> Bản trước ghi *"chưa migrate DB đang dùng"*, *"chưa commit hoặc push"*, *"chưa kiểm giao diện với từng vai bằng trình duyệt"*. **Cả ba đã xong.** Mục "Chưa triển khai" cũ đã bị bỏ.
+
+---
+
+## 1. Đang chạy ở đâu
+
+| | |
+|---|---|
+| Nhánh | `feat/thiet-ke-v2-docker-netlab`, **đã push**, `origin` khớp `local` |
+| Vượt `main` | 25 commit — chưa mở pull request |
+| CSDL | **Supabase** `aws-0-ap-southeast-2` (Sydney), lược đồ ba vai, dữ liệu đầy đủ |
+| Dịch vụ | `api` · `web` · `caddy`. Postgres local **đã tắt** — hệ thống chạy hoàn toàn trên cloud |
+| Cấu hình | **một** tệp `.env` ở gốc repo |
+
+Đổi về Postgres local: bỏ chú thích `COMPOSE_PROFILES=local` và xóa `DATABASE_URL` trong `.env`. Dữ liệu local vẫn nguyên trong volume `pgdata`.
+
+---
+
+## 2. Hạng mục
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Vai trò | Đã đổi enum, backend và frontend: USER / CONTENT_ADMIN / SYSTEM_ADMIN |
-| Kho tri thức | Cả ba vai chỉ có CNTT + quy định chung áp dụng cho CNTT |
-| Xác thực | JWT đọc lại vai/trạng thái từ CSDL; chỉ nhận tư cách CNTT; vai khoa khác không nâng quyền |
-| Tài liệu | CONTENT_ADMIN và SYSTEM_ADMIN upload/sửa/gỡ/retry; USER chỉ đọc |
-| Tài khoản | Chỉ SYSTEM_ADMIN xem/khóa/mở và phân quyền; giới hạn người dùng CNTT |
-| Giao diện | Bỏ chọn khoa và trang cây đơn vị; thêm chọn 3 vai và nhóm tài liệu tải lên; bỏ SSO giả lập |
-| Migration | Có migration không xóa dữ liệu; đã chạy trên DB local thử nghiệm riêng |
-| Provisioning | Có bootstrap-admin.ts, mặc định dry-run; seed demo 1 đơn vị, 57 sinh viên và 3 cán bộ |
-| Đánh giá | Bộ cntt-v1 có 27 câu phù hợp phạm vi; chưa chạy đánh giá bằng Gemini trong phiên này |
-| Sơ đồ | Đã cập nhật SVG/HTML/PlantUML: 16 use case nghiệp vụ + 3 kỹ thuật |
-| Lập trình mạng | Giữ netlab TCP/HTTP, framing, nhiều client; test mạng nằm trong bộ test đã chạy |
-| Tài liệu agent | Dùng agent/, không tạo .agent/; lưu handoff cũ thành tài liệu lịch sử |
+| Vai trò | `USER` / `CONTENT_ADMIN` / `SYSTEM_ADMIN` — enum, backend, frontend |
+| Kho tri thức | cả ba vai cùng phạm vi: CNTT + quy định chung |
+| Xác thực | JWT đọc lại vai và trạng thái từ CSDL mỗi request; chỉ nhận tư cách CNTT |
+| Tài liệu | `CONTENT_ADMIN` và `SYSTEM_ADMIN` ghi được; `USER` chỉ đọc |
+| Tài khoản | chỉ `SYSTEM_ADMIN`; chặn tự khóa, tự hạ vai, tự gỡ mình |
+| Giao diện | bỏ chọn khoa và cây đơn vị; chọn ba vai và nhóm tài liệu; bỏ SSO giả lập |
+| Migration | `20260905090000_cntt_three_roles` — đổi tên enum, **không xóa dữ liệu** |
+| Lập trình mạng | `netlab/` TCP + HTTP tự viết, framing, nhiều client |
+| Hạ tầng | Docker Compose 4 dịch vụ, chuyển local ↔ cloud bằng một biến |
 
-## Kiểm chứng phiên này
+---
 
-- Backend typecheck và build: đạt.
-- Frontend typecheck, ESLint và production build: đạt. Build cần mạng để tải Google Fonts.
-- Test backend: **85 test, 84 đạt, 0 lỗi, 1 bỏ qua**; bài kiểm vector thật bỏ qua do DB thử nghiệm chưa có embedding.
-- Kiểm thử phân quyền: 16 test tích hợp, có request HTTP thật, SQL/Prisma và kiểm JWT sau đổi vai/khóa tài khoản.
-- Migration + seed: đạt trên `tangthu_cntt_test_20260905`, Postgres Docker local. Seed: 6 tài liệu, 11 đoạn văn.
-- Sơ đồ: đã mở và xem trên trình duyệt. Chưa kiểm giao diện ứng dụng với từng vai bằng trình duyệt; test HTTP xác minh backend.
+## 3. Kiểm chứng — số đo trên hệ thống đang chạy
 
-## Chưa triển khai lên dữ liệu đang dùng
+Toàn bộ chạy trên Supabase, Postgres local đã tắt.
 
-- Chưa migrate DB trong server/.env; chưa rebuild/restart các container ứng dụng hiện tại.
-- Chưa chọn hoặc gán tài khoản quản trị viên đầu tiên trên DB đang dùng.
-- Dữ liệu và tài khoản ngoài CNTT không bị xóa. Các tài khoản CNTT từng được seed sang khoa khác cần rà soát/gán CNTT khi nâng cấp.
-- Không chạy seed trên DB thật: seed đặt lại mật khẩu mẫu và cập nhật dữ liệu mồi.
-- Chưa commit hoặc push.
+| Phép đo | Kết quả |
+|---|---|
+| `pnpm test` (backend) | **69/69 đạt**, 0 lỗi |
+| Trong đó `netlab` | **16/16 đạt** |
+| `db:check` | **26/27** — chỉ trượt `maintenance_work_mem` (32 MB, gói free Supabase) |
+| typecheck server · web | 0 lỗi |
+| ESLint web | sạch |
 
-## Phạm vi còn thiếu / không làm
+**Ma trận ba vai, đo bằng HTTP thật:**
 
-- Chưa có màn/API tạo tài khoản; cấp tài khoản bằng provisioning/seed.
-- Chưa có API/màn hình chạy đánh giá; dùng CLI.
-- Không làm CRUD nhiều khoa, SSO, OCR, tuyển sinh hoặc dữ liệu đào tạo cá nhân.
-- Demo LAN, ảnh Wireshark và đo tải/độ trễ cần thực hiện trên môi trường chạy thật trước bảo vệ.
+```
+                     USER   CONTENT_ADMIN   SYSTEM_ADMIN
+GET  /documents       200        200            200
+GET  /users           403        403            200
+POST /documents       403        422            422
+```
 
-## Use case toàn hệ thống
+`403` là chặn ở cửa vai. `422` là đã qua cửa vai, chỉ thiếu tệp — đúng ranh giới cần chứng minh.
 
-Sơ đồ hiện hành tại `docs/use-cases/tang-thu-use-case.html` dùng ba actor: Sinh Viên CNTT (USER), Giáo vụ khoa CNTT (CONTENT_ADMIN), Quản Trị Viên (SYSTEM_ADMIN). Gồm 16 use case nghiệp vụ và 3 use case kỹ thuật; tác nhân kỹ thuật phụ trợ không bổ sung vai trò tài khoản. Các bản SVG, PlantUML và danh mục được sinh từ `docs/use-cases/build_diagrams.py`.
+**Cách ly phạm vi.** CSDL có 9 tài liệu (3 CNTT + 1 KTR + 5 chung). Cả ba vai **đều chỉ thấy 8**; tài liệu Kiến trúc bị loại **kể cả với `SYSTEM_ADMIN`**. Không có nhánh quản trị bỏ qua bộ lọc. Sinh viên không có tư cách CNTT không đăng nhập được.
+
+**JWT không mang quyền.** Cùng một token không đổi một byte:
+
+```
+CONTENT_ADMIN → POST /documents → 422
+   (hạ vai xuống USER trong CSDL)
+cùng token đó → POST /documents → 403
+   (khôi phục CONTENT_ADMIN)
+cùng token đó → POST /documents → 422
+```
+
+Server đọc lại vai từ CSDL mỗi request. Đây là bằng chứng client–server sạch cho học phần: **client giữ token, server giữ quyền**.
+
+**Giao diện, kiểm bằng trình duyệt đủ ba vai.** `CONTENT_ADMIN` không thấy mục Quản trị; `SYSTEM_ADMIN` thấy bảng 60 người dùng với ô chọn ba vai, dòng của chính mình bị khóa. Hỏi đáp: 10 nguồn truy hồi, panel thu về đúng nguồn được trích.
+
+**Độ trễ, đo trực tiếp:**
+
+| | Postgres local | Supabase (Sydney) |
+|---|---|---|
+| `/api/health` | 0,009 s | 0,54 s |
+| `GET /documents` | — | 1,31 s |
+| `/chat` toàn lượt | 3,07 s | 9,14 s |
+
+Chênh lệch này là **dữ liệu đo được cho phần ngân sách độ trễ**: cùng mã nguồn, đổi một dòng `.env`, độ trễ gấp ba. Demo LAN nên chạy local.
+
+---
+
+## 4. Khoảng trống thật
+
+| | Mức | Ghi chú |
+|---|---|---|
+| **Chưa có `.github/`** | cao | Hai tài liệu thiết kế đều ghi kiểm thử rò rỉ phạm vi là **điều kiện chặn merge**. Hiện không có CI nào |
+| **Chưa mở pull request** | trung bình | 25 commit vẫn nằm ngoài `main` |
+| **Chưa chạy đánh giá `cntt-v1`** | trung bình | 27 câu hỏi vàng đã có, chưa có số recall@k/MRR |
+| **Demo LAN, Wireshark, đo tải** | trung bình | phải làm trên môi trường thật trước bảo vệ |
+| Tệp PDF gốc chỉ có trên một máy | thấp | nằm ở volume `uploads`; máy khác dùng chung CSDL vẫn hỏi đáp được nhưng không mở được tệp gốc |
+| Chưa có `POST /users` | thấp | cấp tài khoản bằng seed/provisioning, đúng phạm vi đã chốt |
+
+---
+
+## 5. Rủi ro vận hành đã gặp
+
+**Hai agent cùng ghi một cây làm việc.** Trong phiên 05/09, Codex chạy song song đã ba lần `git checkout main`. Lần đầu xóa sạch 133 tệp v2 khỏi đĩa; lần hai khiến một lệnh cài ghi nhầm vào `package.json` của v1. Không mất dữ liệu vì mọi thứ đã commit, nhưng Git chỉ bảo vệ được phần **đã commit**. Đừng chạy hai agent cùng lúc trên cùng thư mục.
+
+**Dữ liệu sinh viên thật trên repo công khai.** `prisma/seed.ts` chứa họ tên, email và mã số của 57 sinh viên. Repo đang **PUBLIC**, và dữ liệu này đã có trên `origin/main` từ 23/08. Cần quyết định: chuyển repo sang private, hay ẩn danh hóa seed và viết lại lịch sử.
+
+**Khóa Gemini cần xoay.** Khóa hiện tại đã bị lộ dạng rõ trong một phiên làm việc.

@@ -1,264 +1,151 @@
-> **Cập nhật phạm vi 05/09/2026:** ứng dụng hiện chỉ phục vụ sinh viên CNTT, Đại học Kiến trúc Đà Nẵng; ba vai `USER`, `CONTENT_ADMIN`, `SYSTEM_ADMIN`. [PHAM-VI-CNTT.md](PHAM-VI-CNTT.md) và [phan-quyen.md](phan-quyen.md) là đặc tả hiện hành. Các phần hai vai/đa khoa bên dưới là thiết kế v2 được giữ để tham khảo, không còn là yêu cầu triển khai.
-
 # Cấu trúc thư mục — Sổ Tay Sinh Viên CNTT
 
-**Bản final · chốt sau khi rà lại stack, 22/08/2026**
+**Cập nhật 05/09/2026.** Tài liệu này mô tả cây thư mục **thật** trong repo, đã đối chiếu với `git ls-files`.
 
-Monorepo `pnpm workspaces`, hai app deploy độc lập: `apps/frontend` lên Vercel, `apps/backend` lên Hostinger VPS.
-
-## Giả định đang dùng
-
-Ba điểm chưa được xác nhận, tài liệu này đang giả định như sau:
-
-| | Giả định | Đổi thì ảnh hưởng gì |
-|---|---|---|
-| Ngôn ngữ backend | **TypeScript** | Nếu dùng `.js`: chỉ đổi đuôi file, cây thư mục giữ nguyên, nhưng `packages/shared` mất tác dụng |
-| `packages/shared` | **Giữ** | Bỏ thì frontend phải tự định nghĩa lại type `Citation`, dễ lệch với backend |
-| Auth cross-origin | **`Authorization: Bearer`**, token lưu phía client | Khi có tên miền chung (`app.` + `api.` cùng domain gốc) thì chuyển sang cookie `httpOnly` |
+> Bản trước mô tả `apps/backend` + `apps/frontend` + `packages/shared`, triển khai lên Vercel và Hostinger. Cấu trúc đó **không còn tồn tại**: v2 đổi sang `server/` + `web/` chạy bằng Docker Compose trên máy cá nhân, và `packages/` chưa bao giờ được dựng.
 
 ---
 
 ## 1. Tổng thể
 
+Monorepo `pnpm workspaces` với **hai** gói thật. `pnpm-workspace.yaml` còn khai
+`packages/*`, nhưng thư mục đó chưa bao giờ tồn tại nên glob khớp rỗng.
+
 ```
 knowledge-base-rag/
-├── apps/
-│   ├── backend/                # Express 5 + TypeScript   → Hostinger VPS
-│   └── frontend/               # Next.js App Router       → Vercel
-├── packages/
-│   ├── shared/                 # type + DTO dùng chung hai app
-│   └── tsconfig/               # config gốc
-├── eval/                       # bộ câu hỏi vàng + kết quả đo
-├── docs/                       # tài liệu nộp + ADR
-├── scripts/                    # tiện ích chạy tay
-├── .github/
-├── docker-compose.yml
-├── pnpm-workspace.yaml
-├── .env.example
-├── .gitignore · .editorconfig · eslint.config.js
-└── README.md
+├── .env                     # TỆP CẤU HÌNH DUY NHẤT — không commit
+├── .env.example             # mẫu, copy sang .env rồi điền
+├── docker-compose.yml       # 4 dịch vụ: db · api · web · caddy
+├── Caddyfile                # lối vào duy nhất ra LAN, cổng 80
+├── pnpm-workspace.yaml      # server · web · packages/* (glob rỗng)
+├── server/                  # Express 5 + TypeScript
+├── web/                     # Next.js App Router
+├── docs/                    # thiết kế, hợp đồng API, use case
+├── agent/                   # trạng thái và bàn giao giữa các phiên
+└── backup/                  # dump CSDL — bị .gitignore chặn
 ```
+
+**Bốn dịch vụ Docker.** Chỉ `caddy` mở cổng ra LAN; `api` và `web` chỉ `expose` trong mạng nội bộ Docker; `db` chỉ bind `127.0.0.1:5432`, không bao giờ ra mạng lớp. Dịch vụ `db` nằm trong hồ sơ `local`, nên khi dùng Postgres cloud thì nó không khởi động — xem `khoi-tao.md`.
 
 ---
 
-## 2. `apps/backend` — Express 5
+## 2. `server/` — Express 5
 
 ```
-apps/backend/
-├── prisma/
-│   ├── schema.prisma               ★ Đức giữ — không ai tự sửa
-│   ├── migrations/
-│   └── seed.ts                     3 khoa + 5 user mẫu                  [TV4]
-│
-├── src/
-│   ├── server.ts                   listen(PORT)
-│   ├── app.ts                      cors · json · helmet · error handler
-│   ├── routes.ts                   ★ bản đồ toàn bộ API — gọn trong 1 màn hình
-│   │
-│   ├── config/
-│   │   ├── env.ts                  validate biến môi trường bằng zod
-│   │   ├── prisma.ts               PrismaClient singleton
-│   │   ├── gemini.ts               SDK + model id + retry
-│   │   └── supabase.ts             service-role client (Storage)
-│   │
-│   ├── rag/                        ★ LÕI ~200 DÒNG — thuần, không HTTP  [Đức]
-│   │   ├── chunk.ts                cắt theo cấu trúc Điều/Khoản
-│   │   ├── embed.ts                Gemini 1536 chiều + normalize L2 + cache
-│   │   ├── retrieve.ts             hợp nhất vector + full-text
-│   │   ├── generate.ts             gọi Gemini, ràng buộc trích dẫn
-│   │   └── prompt.ts               system prompt tiếng Việt
-│   │
-│   ├── modules/
-│   │   ├── identity/                                                    [TV4]
-│   │   │   ├── identity.route.ts        /auth/* · /users/* · /departments/*
-│   │   │   ├── identity.controller.ts
-│   │   │   ├── identity.service.ts      JWT · bcrypt · gán khoa · đổi vai
-│   │   │   ├── identity.schema.ts       zod
-│   │   │   └── index.ts
-│   │   │
-│   │   ├── ingest/                                                      [TV2]
-│   │   │   ├── ingest.route.ts          /documents/*
-│   │   │   ├── ingest.controller.ts
-│   │   │   ├── ingest.service.ts        upload → Storage → tạo job
-│   │   │   ├── ingest.parser.ts         unpdf · mammoth
-│   │   │   ├── ingest.worker.ts         ★ vòng lặp đọc bảng job
-│   │   │   ├── ingest.schema.ts
-│   │   │   └── index.ts
-│   │   │
-│   │   ├── chat/                                                        [TV3]
-│   │   │   ├── chat.route.ts            /chat/stream (SSE) · /conversations
-│   │   │   ├── chat.controller.ts       ★ nơi DUY NHẤT biết định dạng SSE
-│   │   │   ├── chat.service.ts          AsyncGenerator · lưu lịch sử
-│   │   │   ├── chat.schema.ts
-│   │   │   └── index.ts
-│   │   │
-│   │   └── retrieval/                                                   [Đức]
-│   │       ├── retrieval.route.ts       /search
-│   │       ├── retrieval.controller.ts
-│   │       ├── retrieval.service.ts     tuần 1: trả 3 kết quả cứng
-│   │       ├── retrieval.sql.ts         ★ SQL lai — department_id ở WHERE
-│   │       ├── retrieval.schema.ts
-│   │       └── index.ts
-│   │
-│   ├── middleware/
-│   │   ├── auth.middleware.ts      đọc JWT → req.user                   [TV4]
-│   │   ├── role.middleware.ts      requireRole('EDITOR')                [TV4]
-│   │   ├── upload.middleware.ts    multer · giới hạn kích thước/MIME    [TV2]
-│   │   └── error.middleware.ts     bắt lỗi async · chuẩn hóa response
-│   │
-│   ├── eval/                                                            [Đức]
-│   │   ├── run-eval.ts             CLI: pnpm eval --config=chunk-800
-│   │   └── metrics.ts              recall@k · MRR
-│   │
-│   ├── lib/
-│   │   ├── logger.ts
-│   │   └── errors.ts               AppError · NotFoundError · ForbiddenError
-│   │
-│   └── types/
-│       └── express.d.ts            mở rộng Request thêm `user`
-│
-├── tests/
-│   ├── scope-isolation.test.ts     ★ mốc sống còn Sprint 3              [Đức]
-│   ├── identity.test.ts                                                 [TV4]
-│   ├── ingest.test.ts                                                   [TV2]
-│   └── helpers/  db.ts · factories.ts
-│
+server/
 ├── Dockerfile
-├── .env.example
+├── prisma.config.ts         # nạp .env ở GỐC repo cho Prisma CLI
 ├── package.json
-└── tsconfig.json
+├── prisma/
+│   ├── schema.prisma
+│   ├── migrations/
+│   │   ├── 20260829031547_init/
+│   │   └── 20260905090000_cntt_three_roles/
+│   ├── seed.ts              # dữ liệu mồi demo
+│   ├── check.ts             # kiểm 27 bất biến lược đồ
+│   └── embed.ts             # nạp vector cho đoạn còn thiếu
+├── scripts/
+│   ├── bootstrap-admin.ts   # chỉ định SYSTEM_ADMIN đầu tiên, mặc định dry-run
+│   ├── extract-pdf.ts
+│   └── test-cntt-db.mjs     # chạy migration + seed + test trên DB thử nghiệm riêng
+└── src/
+    ├── server.ts            # điểm vào, lắng nghe cổng
+    ├── app.ts               # lắp middleware
+    ├── routes.ts            # gắn mọi router
+    ├── config/              # env.ts (nơi DUY NHẤT đọc process.env) · prisma.ts
+    ├── lib/                 # errors · http · logger · roles · scope
+    ├── middleware/          # auth · role · error · upload
+    ├── modules/             # xem mục 2.1
+    ├── rag/                 # chunk · embed · generate · prompt · citation-guard
+    ├── netlab/              # xem mục 2.2
+    ├── eval/                # bộ câu hỏi vàng và chỉ số đo
+    ├── worker/              # ingest.worker.ts — vòng lặp nạp tài liệu
+    └── types/express.d.ts   # AuthenticatedUser
 ```
 
----
+### 2.1 `modules/` — mỗi module một lát cắt nghiệp vụ
 
-## 3. `apps/frontend` — Next.js
+Năm module, mỗi cái theo cùng một khuôn: `*.route.ts` → `*.controller.ts` → `*.service.ts`, kèm `*.schema.ts` cho zod và `index.ts` để lộ ra ngoài.
 
-```
-apps/frontend/
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx · globals.css
-│   │   ├── page.tsx                     landing → chuyển hướng /chat
-│   │   ├── (auth)/
-│   │   │   ├── layout.tsx
-│   │   │   └── login/page.tsx            không có màn đăng ký           [TV4]
-│   │   └── (app)/
-│   │       ├── layout.tsx                sidebar + chặn chưa đăng nhập
-│   │       ├── chat/page.tsx                                            [TV3]
-│   │       ├── documents/page.tsx                                       [TV2]
-│   │       └── admin/
-│   │           ├── users/page.tsx                                       [TV4]
-│   │           └── departments/page.tsx                                 [TV4]
-│   │
-│   ├── components/
-│   │   ├── ui/                           shadcn sinh ra — KHÔNG sửa tay
-│   │   └── layout/  Sidebar.tsx · Header.tsx · UserMenu.tsx
-│   │
-│   ├── features/
-│   │   ├── auth/        LoginForm · ChangePasswordDialog · useAuth      [TV4]
-│   │   ├── chat/        ChatBox · MessageList · MessageBubble           [TV3]
-│   │   │                CitationChip · CitationDrawer · useSseStream
-│   │   ├── documents/   UploadDropzone · DocumentTable · StatusBadge    [TV2]
-│   │   └── admin/       UserTable · RoleSelect · DepartmentForm         [TV4]
-│   │
-│   ├── lib/
-│   │   ├── api-client.ts                 fetch wrapper + gắn JWT
-│   │   ├── sse.ts                        đọc luồng SSE
-│   │   └── utils.ts                      cn() của shadcn
-│   │
-│   └── hooks/  use-toast.ts · use-debounce.ts
-│
-├── public/
-├── components.json                       config shadcn
-├── next.config.ts · tailwind.config.ts
-├── .env.local.example
-├── package.json
-└── tsconfig.json
-```
-
----
-
-## 4. Phần dùng chung và tài liệu
-
-```
-packages/
-├── shared/src/
-│   ├── index.ts
-│   ├── roles.ts              VIEWER · CONTRIBUTOR · EDITOR · ADMIN
-│   ├── constants.ts          EMBEDDING_DIM = 1536 · TOP_K · CHUNK_SIZE
-│   └── dto/
-│       ├── auth.dto.ts       LoginRequest · AuthUser
-│       ├── document.dto.ts   DocumentSummary · UploadResponse
-│       └── chat.dto.ts       ★ Citation · StreamEvent — hợp đồng TV3 ↔ Đức
-└── tsconfig/base.json
-
-eval/
-├── golden-questions.yaml     30 câu + đáp án chuẩn + doc_id kỳ vọng
-└── results/                  bảng recall@k của 3 cấu hình
-
-docs/
-├── TONG-QUAN-DU-AN.md        bản cập nhật theo stack đã chốt
-├── cau-truc-thu-muc.md       ← tài liệu này
-├── api-contract.md           ★ chốt tuần 1 — TV3 và TV4 dựa vào để làm song song
-├── data-survey.md            khảo sát 15 tài liệu thật trước khi thiết kế chunk
-├── erd.md                    Mermaid, nằm trong git để review được trong PR
-├── architecture.md
-└── adr/
-    ├── 001-khong-dung-langchain.md
-    ├── 002-lap-department-id-xuong-chunks.md
-    ├── 003-tim-kiem-lai-thay-vi-thuan-vector.md
-    └── 004-supabase-thay-vi-postgres-self-host.md
-
-scripts/
-└── check-pdf.ts              tuần 1: quét file scan, loại khỏi tập dữ liệu
-
-.github/
-├── workflows/
-│   ├── ci.yml                lint + typecheck + test (service pgvector riêng)
-│   └── deploy-api.yml        SSH → Hostinger VPS · docker compose pull && up
-└── pull_request_template.md  ép ghi "Closes #<số>"
-```
-
----
-
-## 5. Bảng sở hữu
-
-| Người | Thư mục sở hữu |
+| Module | Việc |
 |---|---|
-| **Hồ Minh Đức** | `apps/backend/src/rag/` · `apps/backend/src/modules/retrieval/` · `apps/backend/src/eval/` · `apps/backend/prisma/schema.prisma` · `eval/` · `.github/` · `docker-compose.yml` · `docs/adr/` |
-| **Thành viên 2** | `apps/backend/src/modules/ingest/` · `apps/backend/src/middleware/upload.middleware.ts` · `apps/frontend/src/features/documents/` · `apps/frontend/src/app/(app)/documents/` |
-| **Thành viên 3** | `apps/backend/src/modules/chat/` · `apps/frontend/src/features/chat/` · `apps/frontend/src/app/(app)/chat/` |
-| **Thành viên 4** | `apps/backend/src/modules/identity/` · `apps/backend/src/middleware/{auth,role}.middleware.ts` · `apps/backend/prisma/seed.ts` · `apps/frontend/src/features/{auth,admin}/` · `apps/frontend/src/app/(auth)/` · `apps/frontend/src/app/(app)/admin/` |
+| `auth/` | đăng nhập, đọc lại vai từ CSDL mỗi request |
+| `documents/` | tải lên, danh sách, trạng thái xử lý, gỡ, chạy lại |
+| `retrieval/` | truy hồi lai vector + toàn văn, hợp nhất bằng RRF |
+| `chat/` | hỏi đáp qua SSE, ràng buộc trích dẫn |
+| `admin/` | quản lý tài khoản và phân vai — chỉ `SYSTEM_ADMIN` |
 
-**Ba file cả nhóm cùng đụng** — xung đột ở đây thì luôn giữ cả hai bên, đừng chọn "accept mine":
+Ranh giới quan trọng: `chat.controller.ts` là nơi **duy nhất** biết SSE là gì. `chat.service.ts` chỉ sinh ra một chuỗi sự kiện, nhờ vậy bộ đánh giá gọi thẳng service được, không phải dựng HTTP.
 
-- `apps/backend/src/routes.ts`
-- `packages/shared/src/dto/`
-- `apps/frontend/src/components/layout/Sidebar.tsx`
+### 2.2 `netlab/` — phần đặc thù học phần Lập trình mạng
+
+Không import gì từ `modules/`, không chạm CSDL. Chạy độc lập được.
+
+| Tệp | Nội dung |
+|---|---|
+| `framing.ts` | ghép/tách thông điệp trên luồng byte |
+| `tcp-server.ts` | server TCP cổng 9999, chỉ dùng module `net` |
+| `tcp-client.ts` | client đối chiếu, kết nối qua LAN |
+| `http-server.ts` | HTTP server tự viết cổng 8080 — **không** dùng module `http`, không Express |
+| `netlab.test.ts` | 16 test, gồm bài gửi một request cắt làm ba lần `write()` |
+
+Bài test cắt ba mảnh là **bằng chứng**, không phải test cho vui: nó cắt ngay giữa tên header và giữa thân JSON, chứng minh hiểu "TCP là luồng byte, không phải luồng thông điệp".
 
 ---
 
-## 6. Bốn quy ước bắt buộc
+## 3. `web/` — Next.js App Router
 
-1. **`*.controller.ts` không được `import { prisma }`.** Chạm cơ sở dữ liệu là việc của service.
-2. **`*.service.ts` không nhận `Request`, không gọi `res`.** Giữ được điều này thì unit test không cần dựng HTTP — đó là toàn bộ lý do tách tầng.
-3. **Lọc `department_id` nằm trong `retrieval.sql.ts`**, ở mệnh đề `WHERE` trước bước xếp hạng — không phải trong controller. Mục tiêu kỹ thuật số 1 của đồ án là kiểm soát truy cập ở tầng truy vấn.
-4. **Module A dùng module B thì import từ `modules/B/index.ts`**, không thọc thẳng vào file bên trong.
+```
+web/
+├── Dockerfile
+├── .env.local.example
+└── src/
+    ├── app/
+    │   ├── layout.tsx
+    │   ├── (auth)/login/           # ngoài AuthGuard, tránh vòng lặp chuyển hướng
+    │   └── (app)/                  # mọi trang đòi đăng nhập
+    │       ├── chat/
+    │       ├── documents/
+    │       └── admin/{users,permissions,departments}/
+    ├── components/
+    │   ├── layout/                 # Header · Sidebar · UserMenu · AdminNavLink
+    │   └── ui/                     # button · input · textarea
+    ├── features/
+    │   ├── auth/                   # useAuth · AuthGuard · LoginForm
+    │   ├── chat/                   # ChatBox · MessageList · CitationDrawer
+    │   ├── documents/              # DocumentManager · UploadDropzone
+    │   └── admin/                  # UserTable · PermissionMatrix
+    └── lib/                        # api-client · chat-stream · sse · utils · mock-data
+```
 
-Thêm hai điều về tài liệu: `docs/erd.md` và `docs/architecture.md` viết bằng Mermaid để nằm chung git với code; `components/ui/` do shadcn CLI sinh ra, cần đổi giao diện thì bọc component mới trong `features/`.
+`admin/departments/` chỉ còn một dòng `redirect("/admin/users")` — giữ cho liên kết cũ không gãy, đồ án hiện không có màn quản trị nhiều khoa.
+
+Quy ước: `app/` chỉ định tuyến và lắp ráp; mọi logic nằm ở `features/`. `lib/api-client.ts` là **cầu nối duy nhất** tới API — không component nào gọi `fetch` trực tiếp, trừ phần tải tệp vì `multipart/form-data` cần trình duyệt tự sinh `boundary`.
 
 ---
 
-## 7. Tối thiểu phải tồn tại cuối Sprint 1
+## 4. Cấu hình nằm ở đâu
 
-Không dựng hết cây trên trong tuần đầu. Cuối tuần 2 chỉ cần:
+Chỉ **một** tệp `.env` ở gốc repo, dùng chung cho ba nơi:
 
-- `docker-compose.yml` · `pnpm-workspace.yaml` · `.env.example`
-- `prisma/schema.prisma` đầy đủ + `seed.ts`
-- `apps/backend/src/{server,app,routes}.ts` · `config/` · `middleware/{auth,role,error}`
-- `apps/backend/src/modules/identity/` chạy được · `apps/backend/src/modules/ingest/` upload được · `apps/backend/src/modules/retrieval/` trả 3 kết quả cứng
-- `apps/frontend/src/app/(auth)/login` · `apps/frontend/src/app/(app)/chat` gọi được API giả lập
-- `docs/api-contract.md` · `docs/erd.md` · `docs/data-survey.md`
-- `.github/workflows/ci.yml`
+| Ai đọc | Bằng cách nào |
+|---|---|
+| Docker Compose | tự đọc `.env` ở gốc để nội suy `${...}` |
+| Container `api` | `env_file: ./.env` |
+| Script chạy trên máy | `tsx --env-file=../.env`, và `src/config/env.ts` tự nạp |
+| Prisma CLI | `server/prisma.config.ts` nạp bằng `dotenv` |
 
-Mốc Sprint 1: upload một file PDF, thấy các đoạn văn xuất hiện trong bảng `chunks`.
+Prisma cần tệp cấu hình riêng vì CLI của nó **chỉ tìm `.env` ở thư mục hiện tại và cạnh `schema.prisma`**, không tìm ngược lên thư mục cha.
+
+---
+
+## 5. Thứ tài liệu cũ nhắc mà không có thật
+
+| Nhắc trong bản cũ | Thực tế |
+|---|---|
+| `apps/backend`, `apps/frontend` | đổi thành `server/`, `web/` |
+| `packages/shared` | **chưa bao giờ được dựng** — `pnpm-workspace.yaml` vẫn khai `packages/*` nhưng glob khớp rỗng; type dùng chung hiện chép tay giữa hai gói |
+| `packages/tsconfig` | không có; mỗi gói giữ `tsconfig.json` riêng |
+| Deploy Vercel + Hostinger | thay bằng `docker compose up` trên máy cá nhân, demo qua LAN |
+| `server/.env` | đã gộp vào `.env` ở gốc |
+| `.github/` | **chưa có** — đây là khoảng trống thật, xem `agent/STATUS.md` |
