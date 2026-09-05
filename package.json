@@ -9,5 +9,8 @@
     "build": "corepack pnpm --filter @tang-thu/server run build && corepack pnpm --filter @tang-thu/web run build",
     "lint": "corepack pnpm --filter @tang-thu/web run lint",
     "typecheck": "corepack pnpm --recursive run typecheck"
+  },
+  "devDependencies": {
+    "supabase": "^2.116.0"
   }
 }
