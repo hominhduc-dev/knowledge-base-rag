@@ -10,7 +10,21 @@
 // cả máy chủ khởi động vì một module chưa ai viết. Khi TV2 dựng `documents/` và
 // TV3 dựng `chat/`, siết lại chỗ được đánh dấu SIẾT KHI DÙNG bên dưới.
 // ---------------------------------------------------------------------------
-import "dotenv/config";
+// Nạp tệp cấu hình DUY NHẤT ở gốc repo. `dotenv/config` trần chỉ đọc `.env`
+// trong thư mục hiện tại, mà tiến trình có thể chạy từ `server/` (test, script)
+// hoặc từ gốc — nên phải chỉ đích danh.
+//
+// Thiếu tệp thì dotenv im lặng bỏ qua, đúng như mong muốn: trong Docker biến đến
+// từ môi trường container chứ không từ tệp. Biến có sẵn trong `process.env` luôn
+// thắng, dotenv không ghi đè.
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { config as napEnv } from "dotenv";
+
+napEnv({
+  path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../.env"),
+  quiet: true,
+});
 import { z } from "zod";
 
 /** Chuỗi số trong .env luôn về dạng số, kèm chặn NaN. */
@@ -83,7 +97,7 @@ if (!parsed.success) {
     .join("\n");
   console.error(
     `Biến môi trường không hợp lệ:\n${chiTiet}\n\n` +
-      "Copy apps/backend/.env.example sang apps/backend/.env rồi điền giá trị thật.",
+      "Copy .env.example ở gốc repo sang .env rồi điền giá trị thật.",
   );
   process.exit(1);
 }
