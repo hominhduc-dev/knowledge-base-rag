@@ -44,9 +44,8 @@ Những biến phải điền:
   `db`, còn script chạy trên máy dùng `localhost:5432`. Đặt giá trị khi dùng cloud.
 
 > Prisma CLI chỉ tìm `.env` ở thư mục hiện tại và cạnh `schema.prisma`, không tìm
-> ngược lên thư mục cha. Vì vậy các script `db:*` gọi Prisma qua
-> `node --env-file=../.env` để chỉ đích danh tệp gốc. Đừng đổi lại thành `prisma`
-> trần, nó sẽ không thấy biến nào.
+> ngược lên thư mục cha. Vì vậy có `server/prisma.config.ts` — nó tự nạp tệp gốc
+> bằng `dotenv`. Xóa tệp đó đi thì mọi lệnh `db:*` mất `DATABASE_URL`.
 
 ---
 
@@ -108,9 +107,9 @@ corepack pnpm --filter @tang-thu/server run db:embed
 sinh vector — **tốn quota**, nhưng chạy lại được nhiều lần: đoạn nào đã có vector
 cho model hiện tại thì bỏ qua, không gọi thêm lệnh nào.
 
-Cả hai nối tới CSDL qua `DATABASE_URL` trong `server/.env`, không qua Compose. Ở
-chế độ local, giá trị mặc định `localhost:5432` là đúng vì dịch vụ `db` có mở cổng
-đó ra máy chủ.
+Cả hai nối tới CSDL qua `DATABASE_URL` trong `.env` ở gốc, không qua Compose. Ở
+chế độ local, để trống là đúng — script dùng `localhost:5432`, và dịch vụ `db` có
+mở cổng đó ra máy chủ.
 
 ### Kiểm chứng
 
