@@ -35,7 +35,7 @@ Nguồn yêu cầu hiện hành: [PHAM-VI-CNTT.md](../docs/PHAM-VI-CNTT.md). Ba 
 | Migration | `20260905090000_cntt_three_roles` — đổi tên enum, **không xóa dữ liệu** |
 | Lập trình mạng | `netlab/` TCP + HTTP tự viết, framing, nhiều client |
 | Hạ tầng | Docker Compose 4 dịch vụ, chuyển local ↔ cloud bằng một biến |
-| Sơ đồ sequence | `docs/use-cases/so-tay-sequence-3-layer.html`, tạo bằng Archify, 3 lớp Boundary/Control/Entity |
+| Sơ đồ sequence | `docs/use-cases/sequences/`, tạo bằng Archify, mỗi use case một folder riêng |
 
 ---
 
@@ -113,4 +113,4 @@ Chênh lệch này là **dữ liệu đo được cho phần ngân sách độ t
 
 ## 6. Sơ đồ sequence 3 lớp
 
-Đã tạo sequence diagram bằng Archify tại `docs/use-cases/so-tay-sequence-3-layer.html`, nguồn `docs/use-cases/so-tay-sequence-3-layer.sequence.json`. Sơ đồ gom UC01-UC20 theo các luồng xác thực, hỏi đáp/tra cứu, quản trị tài liệu/tài khoản và vận hành; cấu trúc giữ ba lớp Boundary/Presentation, Control/Business Logic và Entity/Data Access.
+Đã tạo sequence diagram bằng Archify tại `docs/use-cases/sequences/`. Mỗi use case có một folder riêng dạng `uc01_usecase_dang_nhap/`, bên trong có `diagram.sequence.json` và `diagram.html`. Trang tổng hợp là `docs/use-cases/sequences/index.html`. Cấu trúc giữ ba lớp Boundary/Presentation, Control/Business Logic và Entity/Data Access.

@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC04 — Đổi mật khẩu",
+    "output": "docs/use-cases/sequences/uc04_usecase_doi_mat_khau/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "Người dùng đã đăng nhập"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "Màn đổi mật khẩu"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Auth Controller"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "users"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 362,
+      "label": "UC04 · Đổi mật khẩu"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Nhập mật khẩu cũ và mới",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "control",
+      "y": 200,
+      "label": "PUT /api/auth/password",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m03",
+      "from": "control",
+      "to": "entity",
+      "y": 232,
+      "label": "Đọc hash hiện tại",
+      "variant": "security"
+    },
+    {
+      "id": "m04",
+      "from": "entity",
+      "to": "control",
+      "y": 264,
+      "label": "Trả hash",
+      "variant": "return"
+    },
+    {
+      "id": "m05",
+      "from": "control",
+      "to": "entity",
+      "y": 296,
+      "label": "Lưu hash mới nếu mật khẩu cũ đúng",
+      "variant": "security"
+    },
+    {
+      "id": "m06",
+      "from": "control",
+      "to": "boundary",
+      "y": 328,
+      "label": "Thành công hoặc lỗi xác thực",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 340,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 232,
+      "to": 340,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 308,
+      "type": "database"
+    }
+  ]
+}

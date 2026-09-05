@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC02 — Đăng xuất",
+    "output": "docs/use-cases/sequences/uc02_usecase_dang_xuat/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "Người dùng đã đăng nhập"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "User menu"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Auth state"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "localStorage"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 330,
+      "label": "UC02 · Đăng xuất"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Chọn đăng xuất",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "control",
+      "y": 200,
+      "label": "Gọi logout()",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "control",
+      "to": "entity",
+      "y": 232,
+      "label": "Xóa token và profile cục bộ",
+      "variant": "security"
+    },
+    {
+      "id": "m04",
+      "from": "control",
+      "to": "boundary",
+      "y": 264,
+      "label": "Phát session-change",
+      "variant": "return"
+    },
+    {
+      "id": "m05",
+      "from": "boundary",
+      "to": "actor",
+      "y": 296,
+      "label": "Chuyển về màn đăng nhập",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 308,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 200,
+      "to": 308,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 276,
+      "type": "database"
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC18 — Tra cứu lai qua API",
+    "output": "docs/use-cases/sequences/uc18_usecase_tra_cuu_lai_qua_api/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "API client đã đăng nhập"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "REST client"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Retrieval Service"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "documents + chunks"
+    },
+    {
+      "id": "external",
+      "type": "cloud",
+      "label": "External",
+      "sublabel": "Gemini API"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 362,
+      "label": "UC18 · Tra cứu lai qua API"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Gửi câu truy vấn debug",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "control",
+      "y": 200,
+      "label": "POST /api/search kèm JWT",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "control",
+      "to": "external",
+      "y": 232,
+      "label": "Tạo embedding câu hỏi",
+      "variant": "dashed"
+    },
+    {
+      "id": "m04",
+      "from": "control",
+      "to": "entity",
+      "y": 264,
+      "label": "SQL vector + full-text có scope",
+      "variant": "security"
+    },
+    {
+      "id": "m05",
+      "from": "entity",
+      "to": "control",
+      "y": 296,
+      "label": "Top-k chunks hợp lệ",
+      "variant": "return"
+    },
+    {
+      "id": "m06",
+      "from": "control",
+      "to": "boundary",
+      "y": 328,
+      "label": "JSON kết quả truy hồi",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 340,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 232,
+      "to": 340,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 308,
+      "type": "database"
+    },
+    {
+      "participant": "external",
+      "from": 264,
+      "to": 308,
+      "type": "cloud"
+    }
+  ]
+}

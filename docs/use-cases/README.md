@@ -8,7 +8,7 @@ Phạm vi hiện hành: sinh viên ngành CNTT, Đại học Kiến trúc Đà N
 - Cả ba chỉ đọc tài liệu CNTT và quy định chung áp dụng cho CNTT.
 - Người vận hành CLI và Gemini API là tác nhân kỹ thuật.
 
-[Mở sơ đồ use case HTML](tang-thu-use-case.html) · [Sequence diagram 3 lớp](so-tay-sequence-3-layer.html) · [SVG nghiệp vụ](tang-thu-use-case.svg) · [SVG kỹ thuật](tang-thu-use-case-operations.svg) · [PlantUML](tang-thu-use-case.puml)
+[Mở sơ đồ use case HTML](tang-thu-use-case.html) · [Sequence diagram từng use case](sequences/index.html) · [SVG nghiệp vụ](tang-thu-use-case.svg) · [SVG kỹ thuật](tang-thu-use-case-operations.svg) · [PlantUML](tang-thu-use-case.puml)
 
 | Mã | Chức năng | API / giới hạn | Nguồn |
 |---|---|---|---|
@@ -34,6 +34,6 @@ Phạm vi hiện hành: sinh viên ngành CNTT, Đại học Kiến trúc Đà N
 
 Tạo tài khoản qua seed; chưa có POST /users. CLI đánh giá đã có, chưa có API /eval/runs. Quản trị nhiều khoa nằm ngoài phạm vi.
 
-Sequence diagram 3 lớp dùng Archify, gom các use case theo ba nhóm chính: xác thực, hỏi đáp/tra cứu, quản trị/vận hành. Ba lớp chuẩn là Boundary/Presentation, Control/Business Logic và Entity/Data Access; Actor và Gemini API nằm ngoài ba lớp.
+Sequence diagram 3 lớp dùng Archify được tách riêng theo từng use case trong `sequences/`. Mỗi use case có một folder riêng, ví dụ `uc01_usecase_dang_nhap/`, gồm `diagram.sequence.json` và `diagram.html`. Ba lớp chuẩn là Boundary/Presentation, Control/Business Logic và Entity/Data Access; Actor và Gemini API nằm ngoài ba lớp.
 
 Tái tạo: `python docs/use-cases/build_diagrams.py`.

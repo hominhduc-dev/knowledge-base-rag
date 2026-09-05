@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC10 — Tải lên tài liệu",
+    "output": "docs/use-cases/sequences/uc10_usecase_tai_len_tai_lieu/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "Giáo vụ khoa CNTT"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "Upload form"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Documents Service"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "files + documents + jobs"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 362,
+      "label": "UC10 · Tải lên tài liệu"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Chọn PDF/DOCX và nhóm tài liệu",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "control",
+      "y": 200,
+      "label": "POST /api/documents multipart",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m03",
+      "from": "control",
+      "to": "entity",
+      "y": 232,
+      "label": "Kiểm quyền ghi và đích CNTT/chung",
+      "variant": "security"
+    },
+    {
+      "id": "m04",
+      "from": "control",
+      "to": "entity",
+      "y": 264,
+      "label": "Lưu file, document, job xử lý",
+      "variant": "default"
+    },
+    {
+      "id": "m05",
+      "from": "entity",
+      "to": "control",
+      "y": 296,
+      "label": "Document id và job id",
+      "variant": "return"
+    },
+    {
+      "id": "m06",
+      "from": "control",
+      "to": "boundary",
+      "y": 328,
+      "label": "Thông báo đã nhận tài liệu",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 340,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 232,
+      "to": 340,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 308,
+      "type": "database"
+    }
+  ]
+}

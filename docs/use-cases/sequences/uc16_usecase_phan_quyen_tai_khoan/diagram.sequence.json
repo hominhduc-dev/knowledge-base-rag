@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC16 — Phân quyền tài khoản",
+    "output": "docs/use-cases/sequences/uc16_usecase_phan_quyen_tai_khoan/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "Quản Trị Viên"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "Admin users UI"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Admin Service"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "department_members"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 362,
+      "label": "UC16 · Phân quyền tài khoản"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Chọn vai USER/CONTENT_ADMIN/SYSTEM_ADMIN",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "control",
+      "y": 200,
+      "label": "POST/DELETE membership role",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "control",
+      "to": "entity",
+      "y": 232,
+      "label": "Transaction và advisory lock",
+      "variant": "security"
+    },
+    {
+      "id": "m04",
+      "from": "control",
+      "to": "entity",
+      "y": 264,
+      "label": "Đọc lại quyền người gọi",
+      "variant": "security"
+    },
+    {
+      "id": "m05",
+      "from": "control",
+      "to": "entity",
+      "y": 296,
+      "label": "Gán hoặc gỡ vai trong CNTT",
+      "variant": "default"
+    },
+    {
+      "id": "m06",
+      "from": "control",
+      "to": "boundary",
+      "y": 328,
+      "label": "Cập nhật role trên bảng",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 340,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 232,
+      "to": 340,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 308,
+      "type": "database"
+    }
+  ]
+}

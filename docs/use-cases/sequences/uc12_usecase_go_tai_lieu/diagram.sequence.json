@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC12 — Gỡ tài liệu",
+    "output": "docs/use-cases/sequences/uc12_usecase_go_tai_lieu/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "Giáo vụ khoa CNTT"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "Documents UI"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Documents Service"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "documents + chunks"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 362,
+      "label": "UC12 · Gỡ tài liệu"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Chọn gỡ tài liệu",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "control",
+      "y": 200,
+      "label": "DELETE /api/documents/:id",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "control",
+      "to": "entity",
+      "y": 232,
+      "label": "Kiểm quyền ghi và scope tài liệu",
+      "variant": "security"
+    },
+    {
+      "id": "m04",
+      "from": "control",
+      "to": "entity",
+      "y": 264,
+      "label": "Loại khỏi kho tri thức",
+      "variant": "default"
+    },
+    {
+      "id": "m05",
+      "from": "entity",
+      "to": "control",
+      "y": 296,
+      "label": "Kết quả xóa/gỡ",
+      "variant": "return"
+    },
+    {
+      "id": "m06",
+      "from": "control",
+      "to": "boundary",
+      "y": 328,
+      "label": "Cập nhật danh sách tài liệu",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 340,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 232,
+      "to": 340,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 308,
+      "type": "database"
+    }
+  ]
+}

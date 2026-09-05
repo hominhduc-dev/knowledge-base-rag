@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC05 — Hỏi đáp học vụ",
+    "output": "docs/use-cases/sequences/uc05_usecase_hoi_dap_hoc_vu/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "Sinh Viên CNTT"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "Chat UI + SSE client"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Chat Service"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "chunks + conversations"
+    },
+    {
+      "id": "external",
+      "type": "cloud",
+      "label": "External",
+      "sublabel": "Gemini API"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 426,
+      "label": "UC05 · Hỏi đáp học vụ"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Gửi câu hỏi học vụ",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "control",
+      "y": 200,
+      "label": "POST /api/chat, mở SSE",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m03",
+      "from": "control",
+      "to": "entity",
+      "y": 232,
+      "label": "Truy hồi lai, lọc scope CNTT/chung",
+      "variant": "security"
+    },
+    {
+      "id": "m04",
+      "from": "entity",
+      "to": "control",
+      "y": 264,
+      "label": "Trả đoạn nguồn phù hợp",
+      "variant": "return"
+    },
+    {
+      "id": "m05",
+      "from": "control",
+      "to": "external",
+      "y": 296,
+      "label": "Generate khi có nguồn",
+      "variant": "dashed"
+    },
+    {
+      "id": "m06",
+      "from": "external",
+      "to": "control",
+      "y": 328,
+      "label": "Câu trả lời nháp",
+      "variant": "return"
+    },
+    {
+      "id": "m07",
+      "from": "control",
+      "to": "entity",
+      "y": 360,
+      "label": "Lưu hội thoại và citation",
+      "variant": "default"
+    },
+    {
+      "id": "m08",
+      "from": "control",
+      "to": "boundary",
+      "y": 392,
+      "label": "Stream câu trả lời kèm nguồn",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 404,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 232,
+      "to": 404,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 372,
+      "type": "database"
+    },
+    {
+      "participant": "external",
+      "from": 296,
+      "to": 372,
+      "type": "cloud"
+    }
+  ]
+}

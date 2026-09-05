@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC07 — Tra cứu kho tài liệu",
+    "output": "docs/use-cases/sequences/uc07_usecase_tra_cuu_kho_tai_lieu/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "Người dùng đã đăng nhập"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "Documents UI"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Documents Service"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "documents"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 394,
+      "label": "UC07 · Tra cứu kho tài liệu"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Mở kho tài liệu hoặc tìm kiếm",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "control",
+      "y": 200,
+      "label": "GET /api/documents",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "control",
+      "to": "entity",
+      "y": 232,
+      "label": "Áp dụng scopeWhere CNTT/chung",
+      "variant": "security"
+    },
+    {
+      "id": "m04",
+      "from": "entity",
+      "to": "control",
+      "y": 264,
+      "label": "Danh sách tài liệu được phép đọc",
+      "variant": "return"
+    },
+    {
+      "id": "m05",
+      "from": "actor",
+      "to": "boundary",
+      "y": 296,
+      "label": "Chọn tài liệu",
+      "variant": "default"
+    },
+    {
+      "id": "m06",
+      "from": "boundary",
+      "to": "control",
+      "y": 328,
+      "label": "GET /api/documents/:id",
+      "variant": "default"
+    },
+    {
+      "id": "m07",
+      "from": "control",
+      "to": "boundary",
+      "y": 360,
+      "label": "Chi tiết tài liệu",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 372,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 232,
+      "to": 372,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 340,
+      "type": "database"
+    }
+  ]
+}

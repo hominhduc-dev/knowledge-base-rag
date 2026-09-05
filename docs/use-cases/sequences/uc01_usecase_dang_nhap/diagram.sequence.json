@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC01 — Đăng nhập",
+    "output": "docs/use-cases/sequences/uc01_usecase_dang_nhap/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "Sinh Viên CNTT / Giáo vụ / Quản Trị"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "Form đăng nhập"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Auth Controller"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "users + memberships"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 394,
+      "label": "UC01 · Đăng nhập"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Chọn đăng nhập",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "actor",
+      "y": 200,
+      "label": "Hiển thị form",
+      "variant": "return"
+    },
+    {
+      "id": "m03",
+      "from": "actor",
+      "to": "boundary",
+      "y": 232,
+      "label": "Nhập mã/email và mật khẩu",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m04",
+      "from": "boundary",
+      "to": "control",
+      "y": 264,
+      "label": "POST /api/auth/login",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m05",
+      "from": "control",
+      "to": "entity",
+      "y": 296,
+      "label": "Kiểm tra tài khoản, mật khẩu, tư cách CNTT",
+      "variant": "security"
+    },
+    {
+      "id": "m06",
+      "from": "entity",
+      "to": "control",
+      "y": 328,
+      "label": "Trả user, role hoặc lỗi",
+      "variant": "return"
+    },
+    {
+      "id": "m07",
+      "from": "control",
+      "to": "boundary",
+      "y": 360,
+      "label": "JWT/profile hoặc thông báo lỗi",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 372,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 232,
+      "to": 372,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 340,
+      "type": "database"
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC14 — Tra cứu người dùng",
+    "output": "docs/use-cases/sequences/uc14_usecase_tra_cuu_nguoi_dung/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "Quản Trị Viên"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "Admin users UI"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Admin Service"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "users + memberships"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 330,
+      "label": "UC14 · Tra cứu người dùng"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Mở trang quản lý tài khoản",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "control",
+      "y": 200,
+      "label": "GET /api/users",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "control",
+      "to": "entity",
+      "y": 232,
+      "label": "requireSystemAdmin và lọc CNTT",
+      "variant": "security"
+    },
+    {
+      "id": "m04",
+      "from": "entity",
+      "to": "control",
+      "y": 264,
+      "label": "Danh sách sinh viên, giáo vụ, quản trị",
+      "variant": "return"
+    },
+    {
+      "id": "m05",
+      "from": "control",
+      "to": "boundary",
+      "y": 296,
+      "label": "Render bảng người dùng",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 308,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 200,
+      "to": 308,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 276,
+      "type": "database"
+    }
+  ]
+}

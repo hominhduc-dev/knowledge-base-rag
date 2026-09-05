@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC20 — Kiểm tra sức khỏe",
+    "output": "docs/use-cases/sequences/uc20_usecase_kiem_tra_suc_khoe/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "Người vận hành"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "HTTP client"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Health Route"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "jobs"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 330,
+      "label": "UC20 · Kiểm tra sức khỏe"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Gọi health endpoint",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "control",
+      "y": 200,
+      "label": "GET /api/health",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "control",
+      "to": "entity",
+      "y": 232,
+      "label": "Đếm job pending/processing",
+      "variant": "default"
+    },
+    {
+      "id": "m04",
+      "from": "entity",
+      "to": "control",
+      "y": 264,
+      "label": "Số job và uptime",
+      "variant": "return"
+    },
+    {
+      "id": "m05",
+      "from": "control",
+      "to": "boundary",
+      "y": 296,
+      "label": "JSON health",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 308,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 200,
+      "to": 308,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 276,
+      "type": "database"
+    }
+  ]
+}

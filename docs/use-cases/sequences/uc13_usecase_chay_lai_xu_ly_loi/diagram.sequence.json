@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "UC13 — Chạy lại xử lý lỗi",
+    "output": "docs/use-cases/sequences/uc13_usecase_chay_lai_xu_ly_loi/diagram.html",
+    "viewBox": [
+      980,
+      500
+    ],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "actor",
+      "type": "external",
+      "label": "Actor",
+      "sublabel": "Giáo vụ khoa CNTT"
+    },
+    {
+      "id": "boundary",
+      "type": "frontend",
+      "label": "Boundary",
+      "sublabel": "Documents UI"
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "Control",
+      "sublabel": "Ingest Worker"
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "Entity",
+      "sublabel": "jobs + chunks"
+    },
+    {
+      "id": "external",
+      "type": "cloud",
+      "label": "External",
+      "sublabel": "Gemini API"
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 394,
+      "label": "UC13 · Chạy lại xử lý lỗi"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "from": "actor",
+      "to": "boundary",
+      "y": 168,
+      "label": "Chọn retry tài liệu lỗi",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m02",
+      "from": "boundary",
+      "to": "control",
+      "y": 200,
+      "label": "POST /api/documents/:id/retry",
+      "variant": "default"
+    },
+    {
+      "id": "m03",
+      "from": "control",
+      "to": "entity",
+      "y": 232,
+      "label": "Kiểm scope và tạo lại job",
+      "variant": "security"
+    },
+    {
+      "id": "m04",
+      "from": "control",
+      "to": "external",
+      "y": 264,
+      "label": "Nhúng vector các đoạn văn",
+      "variant": "dashed"
+    },
+    {
+      "id": "m05",
+      "from": "external",
+      "to": "control",
+      "y": 296,
+      "label": "Embedding result",
+      "variant": "return"
+    },
+    {
+      "id": "m06",
+      "from": "control",
+      "to": "entity",
+      "y": 328,
+      "label": "Lưu chunks và trạng thái mới",
+      "variant": "default"
+    },
+    {
+      "id": "m07",
+      "from": "control",
+      "to": "boundary",
+      "y": 360,
+      "label": "Hiển thị trạng thái retry",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "boundary",
+      "from": 164,
+      "to": 372,
+      "type": "frontend"
+    },
+    {
+      "participant": "control",
+      "from": 232,
+      "to": 372,
+      "type": "backend"
+    },
+    {
+      "participant": "entity",
+      "from": 226,
+      "to": 340,
+      "type": "database"
+    },
+    {
+      "participant": "external",
+      "from": 264,
+      "to": 340,
+      "type": "cloud"
+    }
+  ]
+}
