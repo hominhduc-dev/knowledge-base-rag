@@ -18,29 +18,35 @@ Dành cho người vừa clone repo về. Đọc hết mất 5 phút, làm theo 
 
 ---
 
-## 2. Hai tệp `.env`
+## 2. Một tệp `.env` duy nhất
 
 Repo cố ý **không** commit `.env`. Tạo từ mẫu:
 
 ```bash
-cp .env.example .env && cp server/.env.example server/.env
+cp .env.example .env
 ```
 
-**`.env` ở gốc** — biến hạ tầng, chỉ Docker Compose đọc:
+Chỉ **một** tệp ở gốc repo, dùng chung cho cả ba nơi: Docker Compose nội suy biến
+từ nó, container `api` được nạp chính nó qua `env_file`, và các script chạy trên
+máy (`db:seed`, `db:embed`, `prisma`) cũng đọc chính nó. Không có tệp thứ hai nên
+không có chuyện hai bản lệch nhau.
+
+Những biến phải điền:
 
 - `POSTGRES_PASSWORD` — bắt buộc, không có mặc định. Sinh chuỗi ngẫu nhiên:
   `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"`
 - `COMPOSE_PROFILES=local` — quyết định dùng Postgres trong Docker hay trên cloud, xem mục 3.
 - `HTTP_PORT` — cổng duy nhất mở ra LAN. Đổi sang `8000` nếu cổng 80 đã bị chiếm.
-
-**`server/.env`** — biến ứng dụng:
-
 - `GEMINI_API_KEY` — khóa của riêng bạn.
 - `JWT_SECRET` — sinh giống cách trên. Khác nhau giữa các máy cũng không sao, chỉ
   làm token cũ hết hiệu lực.
-- `DATABASE_URL` — dành cho lúc chạy script **trên máy** (mục 4). Trong Docker,
-  Compose ghi đè giá trị này vì trong mạng Docker máy chủ CSDL tên là `db`, không
-  phải `localhost`.
+- `DATABASE_URL` — bỏ trống ở chế độ local: Compose tự dựng chuỗi trỏ tới dịch vụ
+  `db`, còn script chạy trên máy dùng `localhost:5432`. Đặt giá trị khi dùng cloud.
+
+> Prisma CLI chỉ tìm `.env` ở thư mục hiện tại và cạnh `schema.prisma`, không tìm
+> ngược lên thư mục cha. Vì vậy các script `db:*` gọi Prisma qua
+> `node --env-file=../.env` để chỉ đích danh tệp gốc. Đừng đổi lại thành `prisma`
+> trần, nó sẽ không thấy biến nào.
 
 ---
 

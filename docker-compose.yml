@@ -63,7 +63,9 @@ services:
       dockerfile: server/Dockerfile
     restart: unless-stopped
     env_file:
-      - ./server/.env
+      # Tệp cấu hình duy nhất, ở gốc repo. Compose cũng dùng chính nó để nội suy
+      # `${...}` bên dưới, nên không có chuyện hai tệp lệch nhau.
+      - ./.env
     environment:
       # Đặt DATABASE_URL trong .env ở GỐC để trỏ sang Postgres cloud. Bỏ trống thì
       # dùng mặc định dưới đây: trong mạng Docker máy chủ CSDL tên là `db`, không

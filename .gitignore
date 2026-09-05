@@ -24,3 +24,6 @@ uploads/
 # San pham that nam o docs/*.pptx; phan nay la ban nhap va file kiem tra.
 .codex-finalizer/
 .codex-ppt-build/
+
+# Bản dump CSDL — chứa dữ liệu sinh viên thật, không đưa lên repo.
+backup/
