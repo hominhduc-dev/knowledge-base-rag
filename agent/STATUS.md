@@ -35,6 +35,7 @@ Nguồn yêu cầu hiện hành: [PHAM-VI-CNTT.md](../docs/PHAM-VI-CNTT.md). Ba 
 | Migration | `20260905090000_cntt_three_roles` — đổi tên enum, **không xóa dữ liệu** |
 | Lập trình mạng | `netlab/` TCP + HTTP tự viết, framing, nhiều client |
 | Hạ tầng | Docker Compose 4 dịch vụ, chuyển local ↔ cloud bằng một biến |
+| Sơ đồ sequence | `docs/use-cases/so-tay-sequence-3-layer.html`, tạo bằng Archify, 3 lớp Boundary/Control/Entity |
 
 ---
 
@@ -109,3 +110,7 @@ Chênh lệch này là **dữ liệu đo được cho phần ngân sách độ t
 **Dữ liệu sinh viên thật trên repo công khai.** `prisma/seed.ts` chứa họ tên, email và mã số của 57 sinh viên. Repo đang **PUBLIC**, và dữ liệu này đã có trên `origin/main` từ 23/08. Cần quyết định: chuyển repo sang private, hay ẩn danh hóa seed và viết lại lịch sử.
 
 **Khóa Gemini cần xoay.** Khóa hiện tại đã bị lộ dạng rõ trong một phiên làm việc.
+
+## 6. Sơ đồ sequence 3 lớp
+
+Đã tạo sequence diagram bằng Archify tại `docs/use-cases/so-tay-sequence-3-layer.html`, nguồn `docs/use-cases/so-tay-sequence-3-layer.sequence.json`. Sơ đồ gom UC01-UC20 theo các luồng xác thực, hỏi đáp/tra cứu, quản trị tài liệu/tài khoản và vận hành; cấu trúc giữ ba lớp Boundary/Presentation, Control/Business Logic và Entity/Data Access.

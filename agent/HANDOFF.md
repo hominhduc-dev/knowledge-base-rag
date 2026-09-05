@@ -38,6 +38,7 @@
 | docs/PHAM-VI-CNTT.md, phan-quyen.md | Đặc tả hiện hành; tài liệu v2 có thông báo bị thay thế |
 | docs/use-cases/ | HTML, SVG, PlantUML và script dựng sơ đồ |
 | README.md, agent/*.md, web/src/app/layout.tsx, Header/Sidebar/Login | Tên sản phẩm Sổ Tay Sinh Viên CNTT |
+| docs/use-cases/so-tay-sequence-3-layer.* | Sequence diagram 3 lớp tạo bằng Archify |
 
 ## Quyết định kỹ thuật
 
@@ -61,9 +62,12 @@ corepack pnpm --filter @tang-thu/web lint
 corepack pnpm --filter @tang-thu/web build
 python docs/use-cases/build_diagrams.py
 corepack pnpm --filter @tang-thu/web typecheck
+node C:\Users\PC\.codex\skills\archify\bin\archify.mjs validate sequence docs/use-cases/so-tay-sequence-3-layer.sequence.json --quality showcase --json
+node C:\Users\PC\.codex\skills\archify\bin\archify.mjs deliver sequence docs/use-cases/so-tay-sequence-3-layer.sequence.json docs/use-cases/so-tay-sequence-3-layer.html --quality showcase --json
+node C:\Users\PC\.codex\skills\archify\bin\archify.mjs visual-check docs/use-cases/so-tay-sequence-3-layer.html --json
 ```
 
-Kết quả: typecheck/lint/build đạt; 84/85 test đạt, 1 bỏ qua vì thiếu vector thật, 0 lỗi. Hai migration đã áp dụng thành công trên DB thử nghiệm local riêng. Bộ quyền có 16 test tích hợp SQL/Prisma/service/HTTP. Build frontend lần đầu bị chặn tải font, chạy lại có quyền mạng đã đạt. Sau đổi tên sản phẩm, đã chạy lại generator, reload trang use case trong trình duyệt và chạy `corepack pnpm --filter @tang-thu/web typecheck` đạt. Chưa chạy browser end-to-end trên ứng dụng.
+Kết quả: typecheck/lint/build đạt; 84/85 test đạt, 1 bỏ qua vì thiếu vector thật, 0 lỗi. Hai migration đã áp dụng thành công trên DB thử nghiệm local riêng. Bộ quyền có 16 test tích hợp SQL/Prisma/service/HTTP. Build frontend lần đầu bị chặn tải font, chạy lại có quyền mạng đã đạt. Sau đổi tên sản phẩm, đã chạy lại generator, reload trang use case trong trình duyệt và chạy `corepack pnpm --filter @tang-thu/web typecheck` đạt. Sequence diagram 3 lớp validate/deliver/visual-check bằng Archify đạt. Chưa chạy browser end-to-end trên ứng dụng.
 
 ## Chưa hoàn thành ở môi trường đang dùng
 
@@ -87,4 +91,4 @@ Không có blocker cho thay đổi mã nguồn. Việc kích hoạt trên DB đa
 
 ## Cách tiếp tục
 
-Test độc lập: DB tangthu_cntt_test_20260905 đã tồn tại trong tang-thu-db-1. Chạy node server/scripts/test-cntt-db.mjs từ gốc repo. Không gọi lại createdb nếu DB đã có. Xem docs/use-cases/tang-thu-use-case.html; server preview tạm dùng cổng 8768.
+Test độc lập: DB tangthu_cntt_test_20260905 đã tồn tại trong tang-thu-db-1. Chạy node server/scripts/test-cntt-db.mjs từ gốc repo. Không gọi lại createdb nếu DB đã có. Xem docs/use-cases/tang-thu-use-case.html và docs/use-cases/so-tay-sequence-3-layer.html; server preview tạm dùng cổng 8768.
