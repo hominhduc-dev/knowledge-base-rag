@@ -58,7 +58,9 @@ docker compose up -d
 ### Cloud — dùng chung một CSDL cho cả nhóm
 
 Trong `.env` ở gốc: **xóa** dòng `COMPOSE_PROFILES=local`, rồi đặt `DATABASE_URL`.
-Dịch vụ `db` sẽ không khởi động.
+Dịch vụ `db` sẽ không khởi động — nhưng **vẫn phải giữ `POSTGRES_PASSWORD`**, vì
+Compose nội suy toàn bộ tệp bất kể hồ sơ nào đang bật. Giá trị không được dùng
+tới, điền gì cũng được.
 
 ```
 DATABASE_URL=postgresql://NGUOI_DUNG:MAT_KHAU@HOST:5432/postgres?connect_timeout=30&sslmode=require
