@@ -27,3 +27,11 @@ uploads/
 
 # Bản dump CSDL — chứa dữ liệu sinh viên thật, không đưa lên repo.
 backup/
+
+# Anh kiem tra hien thi cua so do sequence — san pham render lai duoc.
+# 76 tep, 7,6 MB, doi moi lan chay lai visual-check nen moi lan render la mot
+# lop blob moi trong lich su. Giu diagram.sequence.json va script la du de dung lai.
+docs/use-cases/sequences/**/diagram.visual-check.*.png
+
+# Tep khoa cua Word khi dang mo tai lieu
+~$*

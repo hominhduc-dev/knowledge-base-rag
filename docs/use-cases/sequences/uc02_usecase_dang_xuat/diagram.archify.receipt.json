@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc02_usecase_dang_xuat\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc02_usecase_dang_xuat\\diagram.archify.html",
+  "specification": {
+    "sha256": "72bbfed7ad48a2999f167076ce6ce14016b9b20f33e555951694b24af49fb61d",
+    "bytes": 2112
+  },
+  "artifact": {
+    "sha256": "e26fc2b1fa7d14ac5100fb5cc9a2aa5e848f99ccebe902ca6be4a0788a8a7e49",
+    "bytes": 705145
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

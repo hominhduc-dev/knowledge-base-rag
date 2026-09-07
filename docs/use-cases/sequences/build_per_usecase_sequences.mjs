@@ -423,10 +423,11 @@ a:hover{text-decoration:underline}
 <main>
 <h1>Sequence diagram từng use case</h1>
 <p>Mỗi sơ đồ dùng cấu trúc 3 lớp: Boundary/Presentation, Control/Business Logic, Entity/Data Access.</p>
+<p>Ký hiệu BCE: Actor hình người; Boundary, Control và Entity hình tròn theo UML. Bản BCE giữ màu sắc và đường sống của Archify.</p>
 <table>
 <thead><tr><th>Mã</th><th>Use case</th><th>Folder</th><th>Sơ đồ</th><th>Nguồn Archify</th></tr></thead>
 <tbody>
-${rows.map((row) => `<tr><td>${row.id}</td><td>${row.title}</td><td><code>${row.folder}</code></td><td><a href="${row.htmlFile}">Mở HTML</a></td><td><a href="${row.jsonFile}">JSON</a></td></tr>`).join("\n")}
+${rows.map((row) => `<tr><td>${row.id}</td><td>${row.title}</td><td><code>${row.folder}</code></td><td><a href="${row.htmlFile}">Mở BCE</a> · <a href="${row.folder}/diagram.archify.html">Archify gốc</a></td><td><a href="${row.jsonFile}">JSON</a></td></tr>`).join("\n")}
 </tbody>
 </table>
 </main>

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc06_usecase_xem_lai_hoi_thoai\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc06_usecase_xem_lai_hoi_thoai\\diagram.archify.html",
+  "specification": {
+    "sha256": "17cf4abc6293128282189856a964c36958fa7c46ad8923284bcf088c461449aa",
+    "bytes": 2730
+  },
+  "artifact": {
+    "sha256": "0769942c710ea5d788a1f0d23da4c651d1e4690538ccfbd8ebdde327d6f233fa",
+    "bytes": 707593
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

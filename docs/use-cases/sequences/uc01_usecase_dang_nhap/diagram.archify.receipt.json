@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc01_usecase_dang_nhap\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc01_usecase_dang_nhap\\diagram.archify.html",
+  "specification": {
+    "sha256": "a22e76140b42a16af71e98e98cbf5f5492a1daf3e910918f4c4a697331d48b8d",
+    "bytes": 2515
+  },
+  "artifact": {
+    "sha256": "e9a2928610d8d49916905b4e72e2ee26eddb27bc7654a0c3f2a85b1dc0875ded",
+    "bytes": 706467
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

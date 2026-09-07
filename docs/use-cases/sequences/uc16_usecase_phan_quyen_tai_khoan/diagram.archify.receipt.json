@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc16_usecase_phan_quyen_tai_khoan\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc16_usecase_phan_quyen_tai_khoan\\diagram.archify.html",
+  "specification": {
+    "sha256": "92235dcab65fc87f02cf48b681ca6639b76faaf9f41066fbf76ec5c76370aa7d",
+    "bytes": 2366
+  },
+  "artifact": {
+    "sha256": "8315010bb01212776c80bb72c121b657cde9d05f1f44eb128726d53d4cce9409",
+    "bytes": 706017
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

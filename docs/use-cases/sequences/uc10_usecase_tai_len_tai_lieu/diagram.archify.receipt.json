@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc10_usecase_tai_len_tai_lieu\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc10_usecase_tai_len_tai_lieu\\diagram.archify.html",
+  "specification": {
+    "sha256": "56be53919170e9c6f1aef1bdfea24b9e014a9516a8c0f9480891242b7ac71300",
+    "bytes": 2364
+  },
+  "artifact": {
+    "sha256": "1c0d898abb5b8371303473ada648eec67b98239d7ca812414fff3d1c0952211f",
+    "bytes": 706020
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

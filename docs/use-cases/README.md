@@ -37,3 +37,21 @@ Tạo tài khoản qua seed; chưa có POST /users. CLI đánh giá đã có, ch
 Sequence diagram 3 lớp dùng Archify được tách riêng theo từng use case trong `sequences/`. Mỗi use case có một folder riêng, ví dụ `uc01_usecase_dang_nhap/`, gồm `diagram.sequence.json` và `diagram.html`. Ba lớp chuẩn là Boundary/Presentation, Control/Business Logic và Entity/Data Access; Actor và Gemini API nằm ngoài ba lớp.
 
 Tái tạo: `python docs/use-cases/build_diagrams.py`.
+
+### Sequence với biểu tượng BCE
+
+`diagram.html` là bản SVG tùy biến: Actor hình người, Boundary/Control/Entity hình tròn theo mockup; màu, đường sống, thông điệp và dịch vụ ngoài giữ nguyên. `diagram.archify.html` là bản gốc do Archify deliver; JSON nguồn không thêm thuộc tính ngoài schema. Receipt Archify chỉ chứng nhận bản gốc, còn `diagram.bce.receipt.json` ghi SHA-256 bản gốc và bản tùy biến. `diagram.visual-check.*` kiểm tra bản BCE.
+
+Tái tạo đầy đủ trong PowerShell:
+
+```powershell
+node docs/use-cases/sequences/build_per_usecase_sequences.mjs
+$env:ARCHIFY_CLI = 'C:/Users/PC/.codex/skills/archify/bin/archify.mjs'
+node docs/use-cases/sequences/apply_bce_symbols.mjs --render
+Get-ChildItem docs/use-cases/sequences -Directory -Filter 'uc*' | ForEach-Object {
+  node $env:ARCHIFY_CLI visual-check (Join-Path $_.FullName 'diagram.html') --json
+  if ($LASTEXITCODE -ne 0) { throw "Visual check failed: $($_.Name)" }
+}
+```
+
+Nếu chỉ sửa ký hiệu, chạy `node docs/use-cases/sequences/apply_bce_symbols.mjs` để dựng lại từ các bản gốc đã lưu, sau đó chạy lại visual-check. Không sửa thủ công HTML đầu ra.

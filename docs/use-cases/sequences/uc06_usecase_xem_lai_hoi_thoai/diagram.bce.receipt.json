@@ -1,0 +1,14 @@
+{
+  "variant": "BCE static SVG",
+  "source": "diagram.archify.html",
+  "sourceSha256": "0769942c710ea5d788a1f0d23da4c651d1e4690538ccfbd8ebdde327d6f233fa",
+  "artifact": "diagram.html",
+  "artifactSha256": "5ff7efac19b561dcbbe1099a62828e20f21125bb4e7fd52731697ddc8f11cb98",
+  "symbols": [
+    "actor",
+    "boundary",
+    "control",
+    "entity"
+  ],
+  "archifyDeliveryAppliesTo": "diagram.archify.html"
+}

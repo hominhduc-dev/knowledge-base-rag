@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc08_usecase_xem_nguon_trich_dan\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc08_usecase_xem_nguon_trich_dan\\diagram.archify.html",
+  "specification": {
+    "sha256": "e334d59a476c9f0d2f5541a505e909d2f919bca8843d83770bbaa88267dc36df",
+    "bytes": 2730
+  },
+  "artifact": {
+    "sha256": "5e603c892766f220f4bbd3e4340bf9c9dbe5a2970848bf07410bb0ca6b91d736",
+    "bytes": 707554
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

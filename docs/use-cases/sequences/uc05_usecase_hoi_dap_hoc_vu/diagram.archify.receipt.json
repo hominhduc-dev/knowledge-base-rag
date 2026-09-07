@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc05_usecase_hoi_dap_hoc_vu\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc05_usecase_hoi_dap_hoc_vu\\diagram.archify.html",
+  "specification": {
+    "sha256": "c882247ca8f76967b3a65f8dc4cca33229840b315bf589b3d670f7afc118e863",
+    "bytes": 2903
+  },
+  "artifact": {
+    "sha256": "b6d1142f20aa910097b9f0bf987efdf3683aa3903455be80b0eca57818911b8a",
+    "bytes": 708579
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc03_usecase_xem_thong_tin_ca_nhan\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc03_usecase_xem_thong_tin_ca_nhan\\diagram.archify.html",
+  "specification": {
+    "sha256": "3f29edd7186c1919ff6d6eb9150b5266884151d4ff4c17cbb5c2bd032e8e9499",
+    "bytes": 2336
+  },
+  "artifact": {
+    "sha256": "3633710e629e4c7f66fc42987c0a99211a06ad91b4137354fa395469d8ddb87a",
+    "bytes": 705996
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

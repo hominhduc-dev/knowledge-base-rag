@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc04_usecase_doi_mat_khau\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc04_usecase_doi_mat_khau\\diagram.archify.html",
+  "specification": {
+    "sha256": "6729553e3223d9a28f71de6fb20d7e6f6c597474d4eebf0dd2424b6b1fa64085",
+    "bytes": 2335
+  },
+  "artifact": {
+    "sha256": "65a511560846b353113e9029e66d629bfc4bd327982c532227a66d4ec2033df2",
+    "bytes": 705653
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

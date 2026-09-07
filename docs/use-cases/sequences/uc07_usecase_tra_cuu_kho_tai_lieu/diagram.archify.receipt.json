@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc07_usecase_tra_cuu_kho_tai_lieu\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc07_usecase_tra_cuu_kho_tai_lieu\\diagram.archify.html",
+  "specification": {
+    "sha256": "ce2fb4be773806582b862cb9fdb2a143485f44d895f47e5cc481a9a5837ad5b6",
+    "bytes": 2514
+  },
+  "artifact": {
+    "sha256": "076eee307e28012b65ece09267c6768ccbb7bb0cccb24b179c2f7412e64e6469",
+    "bytes": 706745
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

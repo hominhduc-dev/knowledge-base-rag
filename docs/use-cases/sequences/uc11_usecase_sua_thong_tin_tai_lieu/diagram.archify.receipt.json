@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc11_usecase_sua_thong_tin_tai_lieu\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc11_usecase_sua_thong_tin_tai_lieu\\diagram.archify.html",
+  "specification": {
+    "sha256": "40dad6f62374b820d9ae9728827e4133b98eb3c9fa410c705cb4536baada8f51",
+    "bytes": 2349
+  },
+  "artifact": {
+    "sha256": "1d947de327a2bfe67e6e6eaa97d0ad4e0021ae0f181370090c7f2d5bf283916b",
+    "bytes": 705913
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

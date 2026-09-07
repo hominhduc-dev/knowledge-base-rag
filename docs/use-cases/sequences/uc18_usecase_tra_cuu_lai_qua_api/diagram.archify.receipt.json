@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc18_usecase_tra_cuu_lai_qua_api\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc18_usecase_tra_cuu_lai_qua_api\\diagram.archify.html",
+  "specification": {
+    "sha256": "20e53b2404db38de89a46723a437e16d56d184b3d83e8a1b200968757b0966c1",
+    "bytes": 2554
+  },
+  "artifact": {
+    "sha256": "4e5445a208e1fc67f3c6293efd54b6602ac531f2593b4e0caf8055038e882c52",
+    "bytes": 707200
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

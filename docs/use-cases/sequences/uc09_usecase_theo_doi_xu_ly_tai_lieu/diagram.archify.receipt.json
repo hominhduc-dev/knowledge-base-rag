@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc09_usecase_theo_doi_xu_ly_tai_lieu\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc09_usecase_theo_doi_xu_ly_tai_lieu\\diagram.archify.html",
+  "specification": {
+    "sha256": "74a686a0e3c294897f325a82ace6c3521473fe3508de9cddb75a8f25d94918b5",
+    "bytes": 2378
+  },
+  "artifact": {
+    "sha256": "1053da924bea1a0340fd6b2cb63259b9726382558cf5afd74177b65e007ca298",
+    "bytes": 706022
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

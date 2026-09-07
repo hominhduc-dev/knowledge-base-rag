@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc19_usecase_danh_gia_truy_hoi\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc19_usecase_danh_gia_truy_hoi\\diagram.archify.html",
+  "specification": {
+    "sha256": "c47f371d70f8160dd05de13f484901f9758dd3b0d788e6e745a3ac0f4428226a",
+    "bytes": 2561
+  },
+  "artifact": {
+    "sha256": "2972d89f55e3b5629d69be7187fa75259da454ba6e1c66fc0c40132edc33bda6",
+    "bytes": 706780
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

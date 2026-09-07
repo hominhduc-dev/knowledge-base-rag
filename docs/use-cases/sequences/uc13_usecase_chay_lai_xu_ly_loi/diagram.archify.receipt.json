@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc13_usecase_chay_lai_xu_ly_loi\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc13_usecase_chay_lai_xu_ly_loi\\diagram.archify.html",
+  "specification": {
+    "sha256": "08359895be8f0b91fa1289db4fbc9464021670b4406de8f3ef0b68296a5e475b",
+    "bytes": 2736
+  },
+  "artifact": {
+    "sha256": "ad4b1b89d231c4a049c0f411181a5b4d0a981b46261ed4a79efd45071dfcfa78",
+    "bytes": 707843
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

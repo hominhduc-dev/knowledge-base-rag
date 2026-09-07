@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "sequence",
+  "input": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc15_usecase_khoa_mo_tai_khoan\\diagram.sequence.json",
+  "output": "D:\\Source_code\\knowledge-base-rag\\docs\\use-cases\\sequences\\uc15_usecase_khoa_mo_tai_khoan\\diagram.archify.html",
+  "specification": {
+    "sha256": "51c9062604c60355b0750c315a0e375d5f0a5ee9793e489f58003708a8497130",
+    "bytes": 2322
+  },
+  "artifact": {
+    "sha256": "047d0b70fd8f7c304252af2261201cfa82a479939d3b9b977c61024660ddfa4d",
+    "bytes": 705896
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}
