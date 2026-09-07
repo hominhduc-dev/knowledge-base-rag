@@ -1,0 +1,992 @@
+[
+ {
+  "id": "UC01",
+  "title": "Đăng nhập",
+  "actor": "Sinh Viên CNTT / Giáo vụ / Quản Trị",
+  "boundary": "Form đăng nhập",
+  "control": "Auth Controller",
+  "entity": "users + memberships",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Chọn đăng nhập",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "actor",
+    "Hiển thị form",
+    "return"
+   ],
+   [
+    "actor",
+    "boundary",
+    "Nhập mã/email và mật khẩu",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "POST /api/auth/login",
+    "emphasis"
+   ],
+   [
+    "control",
+    "entity",
+    "Kiểm tra tài khoản, mật khẩu, tư cách CNTT",
+    "security"
+   ],
+   [
+    "entity",
+    "control",
+    "Trả user, role hoặc lỗi",
+    "return"
+   ],
+   [
+    "control",
+    "boundary",
+    "JWT/profile hoặc thông báo lỗi",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Nhánh đúng mật khẩu trả JWT và profile.",
+   "Sai mật khẩu hoặc không có tư cách CNTT trả lỗi đăng nhập."
+  ]
+ },
+ {
+  "id": "UC02",
+  "title": "Đăng xuất",
+  "actor": "Người dùng đã đăng nhập",
+  "boundary": "User menu",
+  "control": "Auth state",
+  "entity": "localStorage",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Chọn đăng xuất",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "Gọi logout()",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Xóa token và profile cục bộ",
+    "security"
+   ],
+   [
+    "control",
+    "boundary",
+    "Phát session-change",
+    "return"
+   ],
+   [
+    "boundary",
+    "actor",
+    "Chuyển về màn đăng nhập",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Không có API logout ở backend.",
+   "Phiên bị kết thúc ở trình duyệt bằng cách xóa token."
+  ]
+ },
+ {
+  "id": "UC03",
+  "title": "Xem thông tin cá nhân",
+  "actor": "Người dùng đã đăng nhập",
+  "boundary": "User menu / Layout",
+  "control": "Auth Controller",
+  "entity": "users + departments",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Mở thông tin cá nhân",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "GET /api/auth/me",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Đọc user active và membership CNTT",
+    "security"
+   ],
+   [
+    "entity",
+    "control",
+    "Trả profile, role, scope",
+    "return"
+   ],
+   [
+    "control",
+    "boundary",
+    "JSON profile",
+    "return"
+   ],
+   [
+    "boundary",
+    "actor",
+    "Hiển thị thông tin và vai",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Backend không tin role tự khai từ client.",
+   "Mỗi request đọc lại trạng thái tài khoản từ CSDL."
+  ]
+ },
+ {
+  "id": "UC04",
+  "title": "Đổi mật khẩu",
+  "actor": "Người dùng đã đăng nhập",
+  "boundary": "Màn đổi mật khẩu",
+  "control": "Auth Controller",
+  "entity": "users",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Nhập mật khẩu cũ và mới",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "PUT /api/auth/password",
+    "emphasis"
+   ],
+   [
+    "control",
+    "entity",
+    "Đọc hash hiện tại",
+    "security"
+   ],
+   [
+    "entity",
+    "control",
+    "Trả hash",
+    "return"
+   ],
+   [
+    "control",
+    "entity",
+    "Lưu hash mới nếu mật khẩu cũ đúng",
+    "security"
+   ],
+   [
+    "control",
+    "boundary",
+    "Thành công hoặc lỗi xác thực",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Mật khẩu cũ sai thì không cập nhật.",
+   "Use case có API backend; UI có thể bổ sung sau nếu cần."
+  ]
+ },
+ {
+  "id": "UC05",
+  "title": "Hỏi đáp học vụ",
+  "actor": "Sinh Viên CNTT",
+  "boundary": "Chat UI + SSE client",
+  "control": "Chat Service",
+  "entity": "chunks + conversations",
+  "external": "Gemini API",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Gửi câu hỏi học vụ",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "POST /api/chat, mở SSE",
+    "emphasis"
+   ],
+   [
+    "control",
+    "entity",
+    "Truy hồi lai, lọc scope CNTT/chung",
+    "security"
+   ],
+   [
+    "entity",
+    "control",
+    "Trả đoạn nguồn phù hợp",
+    "return"
+   ],
+   [
+    "control",
+    "external",
+    "Generate khi có nguồn",
+    "dashed"
+   ],
+   [
+    "external",
+    "control",
+    "Câu trả lời nháp",
+    "return"
+   ],
+   [
+    "control",
+    "entity",
+    "Lưu hội thoại và citation",
+    "default"
+   ],
+   [
+    "control",
+    "boundary",
+    "Stream câu trả lời kèm nguồn",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Không có nguồn thì từ chối, không bịa đáp án.",
+   "Câu trả lời phải có citation hợp lệ."
+  ]
+ },
+ {
+  "id": "UC06",
+  "title": "Xem lại hội thoại",
+  "actor": "Người dùng đã đăng nhập",
+  "boundary": "Chat history",
+  "control": "Chat Controller",
+  "entity": "conversations + messages",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Mở danh sách hội thoại",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "GET /api/conversations",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Lọc hội thoại của chính người dùng",
+    "security"
+   ],
+   [
+    "entity",
+    "control",
+    "Danh sách hội thoại",
+    "return"
+   ],
+   [
+    "actor",
+    "boundary",
+    "Chọn một hội thoại",
+    "default"
+   ],
+   [
+    "boundary",
+    "control",
+    "GET /api/conversations/:id",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Đọc messages và citations của chủ sở hữu",
+    "security"
+   ],
+   [
+    "control",
+    "boundary",
+    "Hiển thị nội dung hội thoại",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Không đọc hội thoại của người khác.",
+   "Nguồn trích dẫn đi kèm từng câu trả lời đã lưu."
+  ]
+ },
+ {
+  "id": "UC07",
+  "title": "Tra cứu kho tài liệu",
+  "actor": "Người dùng đã đăng nhập",
+  "boundary": "Documents UI",
+  "control": "Documents Service",
+  "entity": "documents",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Mở kho tài liệu hoặc tìm kiếm",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "GET /api/documents",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Áp dụng scopeWhere CNTT/chung",
+    "security"
+   ],
+   [
+    "entity",
+    "control",
+    "Danh sách tài liệu được phép đọc",
+    "return"
+   ],
+   [
+    "actor",
+    "boundary",
+    "Chọn tài liệu",
+    "default"
+   ],
+   [
+    "boundary",
+    "control",
+    "GET /api/documents/:id",
+    "default"
+   ],
+   [
+    "control",
+    "boundary",
+    "Chi tiết tài liệu",
+    "return"
+   ]
+  ],
+  "notes": [
+   "SYSTEM_ADMIN cũng không đọc tài liệu khoa khác.",
+   "Dữ liệu ngoài CNTT được giữ trong DB nhưng không hiện qua app."
+  ]
+ },
+ {
+  "id": "UC08",
+  "title": "Xem nguồn trích dẫn",
+  "actor": "Người dùng đã đăng nhập",
+  "boundary": "Citation drawer",
+  "control": "Documents Service",
+  "entity": "chunks + files",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Bấm nguồn trích dẫn",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "GET /api/documents/:id/chunks",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Kiểm scope tài liệu và đọc chunks",
+    "security"
+   ],
+   [
+    "entity",
+    "control",
+    "Trả đoạn văn được phép đọc",
+    "return"
+   ],
+   [
+    "actor",
+    "boundary",
+    "Mở file gốc nếu cần",
+    "default"
+   ],
+   [
+    "boundary",
+    "control",
+    "GET /api/documents/:id/file",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Kiểm scope trước khi trả file",
+    "security"
+   ],
+   [
+    "control",
+    "boundary",
+    "Hiển thị đoạn văn hoặc file",
+    "return"
+   ]
+  ],
+  "notes": [
+   "File gốc không được phục vụ tĩnh trực tiếp.",
+   "Mọi truy cập citation đều kiểm phạm vi tài liệu."
+  ]
+ },
+ {
+  "id": "UC09",
+  "title": "Theo dõi xử lý tài liệu",
+  "actor": "Người dùng đã đăng nhập",
+  "boundary": "Documents UI",
+  "control": "Documents Service",
+  "entity": "documents + jobs",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Mở trạng thái tài liệu",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "GET /api/documents/:id/status",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Kiểm scope tài liệu",
+    "security"
+   ],
+   [
+    "control",
+    "entity",
+    "Đọc trạng thái document/job",
+    "default"
+   ],
+   [
+    "entity",
+    "control",
+    "pending/processing/failed/ready",
+    "return"
+   ],
+   [
+    "control",
+    "boundary",
+    "Hiển thị trạng thái xử lý",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Sinh viên chỉ theo dõi tài liệu được phép đọc.",
+   "Giáo vụ dùng trạng thái này để quyết định retry."
+  ]
+ },
+ {
+  "id": "UC10",
+  "title": "Tải lên tài liệu",
+  "actor": "Giáo vụ khoa CNTT",
+  "boundary": "Upload form",
+  "control": "Documents Service",
+  "entity": "files + documents + jobs",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Chọn PDF/DOCX và nhóm tài liệu",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "POST /api/documents multipart",
+    "emphasis"
+   ],
+   [
+    "control",
+    "entity",
+    "Kiểm quyền ghi và đích CNTT/chung",
+    "security"
+   ],
+   [
+    "control",
+    "entity",
+    "Lưu file, document, job xử lý",
+    "default"
+   ],
+   [
+    "entity",
+    "control",
+    "Document id và job id",
+    "return"
+   ],
+   [
+    "control",
+    "boundary",
+    "Thông báo đã nhận tài liệu",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Chỉ CONTENT_ADMIN/SYSTEM_ADMIN được upload.",
+   "Tài liệu ngoài CNTT bị từ chối trong phạm vi đồ án."
+  ]
+ },
+ {
+  "id": "UC11",
+  "title": "Sửa thông tin tài liệu",
+  "actor": "Giáo vụ khoa CNTT",
+  "boundary": "Documents UI",
+  "control": "Documents Service",
+  "entity": "documents",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Sửa tiêu đề hoặc nhóm tài liệu",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "PATCH /api/documents/:id",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Kiểm quyền ghi và scope hiện tại",
+    "security"
+   ],
+   [
+    "control",
+    "entity",
+    "Cập nhật metadata",
+    "default"
+   ],
+   [
+    "entity",
+    "control",
+    "Document đã cập nhật",
+    "return"
+   ],
+   [
+    "control",
+    "boundary",
+    "Hiển thị kết quả",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Không cho chuyển tài liệu sang đơn vị ngoài phạm vi.",
+   "Kiểm quyền ở cả route và service."
+  ]
+ },
+ {
+  "id": "UC12",
+  "title": "Gỡ tài liệu",
+  "actor": "Giáo vụ khoa CNTT",
+  "boundary": "Documents UI",
+  "control": "Documents Service",
+  "entity": "documents + chunks",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Chọn gỡ tài liệu",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "DELETE /api/documents/:id",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Kiểm quyền ghi và scope tài liệu",
+    "security"
+   ],
+   [
+    "control",
+    "entity",
+    "Loại khỏi kho tri thức",
+    "default"
+   ],
+   [
+    "entity",
+    "control",
+    "Kết quả xóa/gỡ",
+    "return"
+   ],
+   [
+    "control",
+    "boundary",
+    "Cập nhật danh sách tài liệu",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Use case gỡ khỏi kho tri thức, không mở rộng quản trị nhiều khoa.",
+   "Sinh viên không gọi được thao tác này."
+  ]
+ },
+ {
+  "id": "UC13",
+  "title": "Chạy lại xử lý lỗi",
+  "actor": "Giáo vụ khoa CNTT",
+  "boundary": "Documents UI",
+  "control": "Ingest Worker",
+  "entity": "jobs + chunks",
+  "external": "Gemini API",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Chọn retry tài liệu lỗi",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "POST /api/documents/:id/retry",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Kiểm scope và tạo lại job",
+    "security"
+   ],
+   [
+    "control",
+    "external",
+    "Nhúng vector các đoạn văn",
+    "dashed"
+   ],
+   [
+    "external",
+    "control",
+    "Embedding result",
+    "return"
+   ],
+   [
+    "control",
+    "entity",
+    "Lưu chunks và trạng thái mới",
+    "default"
+   ],
+   [
+    "control",
+    "boundary",
+    "Hiển thị trạng thái retry",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Retry chỉ dành cho tài liệu trong scope CNTT/chung.",
+   "Worker chạy nền, không giữ request mở lâu."
+  ]
+ },
+ {
+  "id": "UC14",
+  "title": "Tra cứu người dùng",
+  "actor": "Quản Trị Viên",
+  "boundary": "Admin users UI",
+  "control": "Admin Service",
+  "entity": "users + memberships",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Mở trang quản lý tài khoản",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "GET /api/users",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "requireSystemAdmin và lọc CNTT",
+    "security"
+   ],
+   [
+    "entity",
+    "control",
+    "Danh sách sinh viên, giáo vụ, quản trị",
+    "return"
+   ],
+   [
+    "control",
+    "boundary",
+    "Render bảng người dùng",
+    "return"
+   ]
+  ],
+  "notes": [
+   "CONTENT_ADMIN không được xem danh sách tài khoản.",
+   "Danh sách chỉ gồm người dùng thuộc phạm vi CNTT."
+  ]
+ },
+ {
+  "id": "UC15",
+  "title": "Khóa / mở tài khoản",
+  "actor": "Quản Trị Viên",
+  "boundary": "Admin users UI",
+  "control": "Admin Service",
+  "entity": "users",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Bật/tắt trạng thái tài khoản",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "PATCH /api/users/:id",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Kiểm SYSTEM_ADMIN và target CNTT",
+    "security"
+   ],
+   [
+    "control",
+    "entity",
+    "Cấm tự khóa chính mình",
+    "security"
+   ],
+   [
+    "control",
+    "entity",
+    "Cập nhật isActive",
+    "default"
+   ],
+   [
+    "control",
+    "boundary",
+    "Trả trạng thái mới",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Không xóa tài khoản.",
+   "Tự khóa tài khoản quản trị của mình bị chặn."
+  ]
+ },
+ {
+  "id": "UC16",
+  "title": "Phân quyền tài khoản",
+  "actor": "Quản Trị Viên",
+  "boundary": "Admin users UI",
+  "control": "Admin Service",
+  "entity": "department_members",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Chọn vai USER/CONTENT_ADMIN/SYSTEM_ADMIN",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "POST/DELETE membership role",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Transaction và advisory lock",
+    "security"
+   ],
+   [
+    "control",
+    "entity",
+    "Đọc lại quyền người gọi",
+    "security"
+   ],
+   [
+    "control",
+    "entity",
+    "Gán hoặc gỡ vai trong CNTT",
+    "default"
+   ],
+   [
+    "control",
+    "boundary",
+    "Cập nhật role trên bảng",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Cấm tự hạ vai hoặc tự gỡ quyền sử dụng.",
+   "Chỉ gán một trong ba vai đã chốt."
+  ]
+ },
+ {
+  "id": "UC18",
+  "title": "Tra cứu lai qua API",
+  "actor": "API client đã đăng nhập",
+  "boundary": "REST client",
+  "control": "Retrieval Service",
+  "entity": "documents + chunks",
+  "external": "Gemini API",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Gửi câu truy vấn debug",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "POST /api/search kèm JWT",
+    "default"
+   ],
+   [
+    "control",
+    "external",
+    "Tạo embedding câu hỏi",
+    "dashed"
+   ],
+   [
+    "control",
+    "entity",
+    "SQL vector + full-text có scope",
+    "security"
+   ],
+   [
+    "entity",
+    "control",
+    "Top-k chunks hợp lệ",
+    "return"
+   ],
+   [
+    "control",
+    "boundary",
+    "JSON kết quả truy hồi",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Dùng cho gỡ lỗi truy hồi.",
+   "Vẫn áp dụng scope của người gọi."
+  ]
+ },
+ {
+  "id": "UC19",
+  "title": "Đánh giá truy hồi",
+  "actor": "Người vận hành",
+  "boundary": "CLI eval",
+  "control": "Eval Runner",
+  "entity": "eval_runs + chunks",
+  "external": "Gemini API",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Chạy pnpm --filter @tang-thu/server eval",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "Nạp bộ câu hỏi cntt-v1",
+    "default"
+   ],
+   [
+    "control",
+    "external",
+    "Embedding từng câu hỏi",
+    "dashed"
+   ],
+   [
+    "control",
+    "entity",
+    "Truy hồi và so khớp expected document",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Lưu recall@k và MRR",
+    "default"
+   ],
+   [
+    "control",
+    "boundary",
+    "In báo cáo kết quả",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Đây là luồng CLI, không phải quyền quản trị web.",
+   "Chưa có API/màn hình /eval/runs."
+  ]
+ },
+ {
+  "id": "UC20",
+  "title": "Kiểm tra sức khỏe",
+  "actor": "Người vận hành",
+  "boundary": "HTTP client",
+  "control": "Health Route",
+  "entity": "jobs",
+  "messages": [
+   [
+    "actor",
+    "boundary",
+    "Gọi health endpoint",
+    "emphasis"
+   ],
+   [
+    "boundary",
+    "control",
+    "GET /api/health",
+    "default"
+   ],
+   [
+    "control",
+    "entity",
+    "Đếm job pending/processing",
+    "default"
+   ],
+   [
+    "entity",
+    "control",
+    "Số job và uptime",
+    "return"
+   ],
+   [
+    "control",
+    "boundary",
+    "JSON health",
+    "return"
+   ]
+  ],
+  "notes": [
+   "Không yêu cầu đăng nhập.",
+   "Dùng để kiểm tra uptime và hàng đợi xử lý."
+  ]
+ }
+]
