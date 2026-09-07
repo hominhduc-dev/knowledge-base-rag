@@ -1,5 +1,30 @@
 # Handoff — Sổ Tay Sinh Viên CNTT
 
+## Báo cáo phân tích thiết kế — 05/09/2026
+
+- Đã tạo `docs/Phan-tich-thiet-ke-So-Tay-Sinh-Vien-CNTT.docx` theo template Markdown người dùng cung cấp: sáu phần, 19 UC, đặc tả UC05, tám hình, từ điển 15 bảng và kế hoạch kiểm thử.
+- Nguồn soạn trong `docs/report-build/build_sad.py`; schema lấy trực tiếp từ Prisma. Giữ ba vai và phạm vi CNTT, ghi rõ chỉ tiêu nghiệm thu đề xuất, không coi kế hoạch kiểm thử là kết quả chạy thật.
+- Đã xuất kiểm tra bằng Word và xem bản render 17 trang. Renderer LibreOffice của skill không chạy được do máy thiếu soffice; dùng Word ExportAsFixedFormat và Python pypdfium2 để kiểm tra thay thế. File QA trong `docs/report-build/rendered/`, không phải sản phẩm bàn giao.
+- Đã commit trong nhóm `docs(report)`.
+
+## Bổ sung mới nhất — biểu tượng BCE, 05/09/2026
+
+- Áp dụng mockup cho 19 sequence: Actor hình người; Boundary có thanh bên trái; Control có mũi tên phía trên; Entity có gạch dưới. Giữ nhãn, thông điệp, màu và lifeline. Gemini giữ hình cũ.
+- `docs/use-cases/sequences/apply_bce_symbols.mjs` dựng SVG tĩnh trong `diagram.html`, giữ tương tác và xuất ảnh. `--render` nhận đường dẫn CLI từ `ARCHIFY_CLI`, deliver `diagram.archify.html` trước rồi tạo bản BCE. Không sửa skill cài ngoài repo.
+- Mỗi folder có receipt Archify cho bản gốc và receipt BCE ghi hash nguồn/đầu ra. Trang index liên kết cả hai bản. Lệnh tái tạo đầy đủ trong `docs/use-cases/README.md`.
+- Kiểm chứng: 19/19 deliver gốc, 19/19 visual-check BCE; xem ảnh UC01/UC05 cả hai theme, zoom in/out và copy PNG trên UC01 thành công. Chrome cần chạy ngoài sandbox do lỗi GPU khi bị giới hạn.
+- Đã commit trong nhóm `docs(sequences)`.
+
+## Báo cáo PTTKHT và dọn kho — 06/09/2026
+
+- Đã tạo `docs/Bao-cao-PTTKHT-So-Tay-Sinh-Vien-CNTT.docx`: 79 trang, 81 hình, 16 bảng, bốn chương theo đề cương môn Đồ án Phân tích thiết kế hệ thống. Đặc tả 12/19 UC (63%), mỗi UC kèm biểu đồ trình tự, cộng tác, lớp tham gia và hoạt động; thêm 11 biểu đồ trạng thái và 10 màn hình phác thảo.
+- Bộ dựng nằm ở `docs/report-build/`: `draw.py`, `flow.py`, `uml.py`, `ui.py` là renderer PIL; `gen_ch12.py`, `gen_ch3.py` sinh 81 ảnh; `report_doc.py`, `build_pttkht.py`, `chapters34.py` dựng file Word. Không phụ thuộc Archify hay công cụ ngoài. Hướng dẫn trong `docs/report-build/README-pttkht.md`.
+- Ràng buộc bắt buộc khi sửa renderer: ảnh rộng tối đa 1700 px, chữ tối thiểu 25 px. Ảnh đặt vừa 15,5 cm trên A4 nên vượt tỷ lệ đó là chữ in dưới 6 pt. Đây đúng là lỗi của `usecase.png` bản cũ (4700 px), đã tránh trong bộ mới.
+- Mục 3.3 của báo cáo viết procedure/function/trigger bằng PL/pgSQL. Bản chạy hiện tại đặt cùng nghiệp vụ ở tầng service TypeScript; báo cáo ghi rõ điều này, không để người đọc tưởng CSDL đang chạy các thủ tục đó.
+- Đã bỏ theo dõi 76 ảnh `diagram.visual-check.*.png` (7,6 MB) và thêm luật ignore. Lưu ý: các blob này vẫn nằm trong commit `e16cfef` nên lịch sử vẫn mang dung lượng đó; luật ignore chỉ chặn ảnh mới.
+- Archify đã cài cho Claude Code bằng junction `~/.claude/skills/archify` trỏ về `~/.codex/skills/archify`, dùng chung một bản với CLI global. Script `apply_bce_symbols.mjs --render` cần set `ARCHIFY_CLI` trỏ tới `bin/archify.mjs`.
+- Kiểm tra bản in bằng Word ExportAsFixedFormat rồi rasterize bằng `pypdfium2` (đã cài thêm gói này). Bản QA trong `docs/report-build/rendered/`, đã ignore.
+
 ## Thông tin
 
 - Agent: Codex.

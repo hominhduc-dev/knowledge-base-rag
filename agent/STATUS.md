@@ -1,5 +1,16 @@
 # Trạng thái — Sổ Tay Sinh Viên CNTT
 
+- Báo cáo Đồ án PTTKHT: `docs/Bao-cao-PTTKHT-So-Tay-Sinh-Vien-CNTT.docx`, 79 trang, 81 hình, đã soi từng trang qua bản render Word; đã commit cùng bộ dựng ở `docs/report-build/`.
+- Ảnh `diagram.visual-check.*.png` không còn theo dõi trong Git; dựng lại bằng `apply_bce_symbols.mjs`.
+
+- Báo cáo phân tích thiết kế theo mẫu người dùng: `docs/Phan-tich-thiet-ke-So-Tay-Sinh-Vien-CNTT.docx`, 17 trang, đã kiểm tra bản render Word; đã commit.
+
+## Cập nhật sơ đồ BCE — 05/09/2026
+
+- Đã đổi ký hiệu Actor/Boundary/Control/Entity cho 19 sequence; giữ màu, đường sống và nội dung. Mỗi UC vẫn có folder riêng.
+- Archify deliver bản gốc đạt 19/19; kiểm tra Chrome bản BCE đạt 19/19 ở bốn kích thước và hai theme. Đã xem ảnh UC01, UC05 sáng/tối; kiểm tra zoom và thao tác copy PNG thành công trên UC01.
+- Script và cách tái tạo: `docs/use-cases/README.md`, mục Sequence với biểu tượng BCE. Bản tùy biến có receipt riêng, không dùng receipt Archify gốc để chứng nhận HTML đã tùy biến.
+
 **Cập nhật: 05/09/2026, sau khi triển khai.** Học phần Lập trình mạng máy tính. Đối tượng duy nhất: sinh viên ngành CNTT, Trường Đại học Kiến trúc Đà Nẵng.
 
 Nguồn yêu cầu hiện hành: [PHAM-VI-CNTT.md](../docs/PHAM-VI-CNTT.md). Ba vai đã chốt, không triển khai phạm vi đa khoa.
