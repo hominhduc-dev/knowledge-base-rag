@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Sổ Tay Sinh Viên CNTT — thành phần tham gia",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "Giao diện Next.js",
+      "sublabel": "Ba vai nghiệp vụ",
+      "pos": [
+        50,
+        280
+      ],
+      "size": [
+        220,
+        90
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "API Express",
+      "sublabel": "JWT · phạm vi CNTT · RAG",
+      "pos": [
+        510,
+        280
+      ],
+      "size": [
+        240,
+        90
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "pgvector · hội thoại · tài liệu",
+      "pos": [
+        1000,
+        280
+      ],
+      "size": [
+        260,
+        90
+      ]
+    },
+    {
+      "id": "gemini",
+      "type": "external",
+      "label": "Gemini API",
+      "sublabel": "Embedding và sinh câu trả lời",
+      "pos": [
+        510,
+        40
+      ],
+      "size": [
+        240,
+        90
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Worker nạp tài liệu",
+      "sublabel": "PDF/DOCX → chunks → vector",
+      "pos": [
+        1000,
+        560
+      ],
+      "size": [
+        260,
+        90
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "client",
+      "to": "api",
+      "label": "REST / SSE"
+    },
+    {
+      "from": "api",
+      "to": "db",
+      "label": "SQL · lọc phạm vi"
+    },
+    {
+      "from": "api",
+      "to": "gemini",
+      "label": "HTTPS · sinh đáp án"
+    },
+    {
+      "from": "worker",
+      "to": "db",
+      "label": "Đọc job / lưu vector"
+    },
+    {
+      "from": "worker",
+      "to": "gemini",
+      "label": "HTTPS · embedding",
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [
+        [
+          1400,
+          605
+        ],
+        [
+          1400,
+          0
+        ],
+        [
+          630,
+          0
+        ]
+      ]
+    }
+  ]
+}
