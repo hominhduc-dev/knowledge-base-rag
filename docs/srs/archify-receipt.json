@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/workspace/scratch/a566d5dfe802/deliverables/components.archify.json",
+  "output": "/workspace/scratch/a566d5dfe802/deliverables/components.archify.html",
+  "specification": {
+    "sha256": "9ffcbdf1bd38b8c72363718aa688b6327312f17bbce4eb8ad9f158674c6f9419",
+    "bytes": 2122
+  },
+  "artifact": {
+    "sha256": "faa2868c68f7ec4e90a1331a93c8e2255e050e035ed601e959231434bc33b834",
+    "bytes": 800694
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}
